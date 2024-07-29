@@ -3,14 +3,22 @@ package com.myapps.splitwiseclone.ui.screens.home
 import android.annotation.SuppressLint
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
@@ -24,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,8 +55,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.database.database
 import com.myapps.splitwiseclone.R
+import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
+import kotlinx.coroutines.tasks.await
 
 
 private const val TAG = "HomeScreen"
@@ -97,6 +109,24 @@ fun HomeScreenContent(navController: NavController) {
     var searchString by remember {
         mutableStateOf("")
     }
+    var isLoading by remember { mutableStateOf(false) }
+    var groups by remember {
+        mutableStateOf(listOf<SplitGroup>())
+    }
+    LaunchedEffect(Unit) {
+        isLoading = true
+        try {
+            val snapshot = Firebase.database.reference.child("groups").get().await()
+            val groupsList =
+                snapshot.children.mapNotNull { it.getValue(SplitGroup::class.java) }
+            groups = groupsList
+        } catch (e: Exception) {
+            Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+        }
+        isLoading = false
+    }
+
+
     val databaseRef =
         Firebase.auth.currentUser?.uid?.let { Firebase.database.reference.child("users").child(it) }
     databaseRef?.get()?.addOnSuccessListener { dataSnapShot ->
@@ -121,20 +151,48 @@ fun HomeScreenContent(navController: NavController) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth().padding(20.dp)){
+
+        if (isLoading) {
             Text(text = "Your groups will appear here")
+            CircularProgressIndicator()
         }
-        Button(onClick = {
-            auth.signOut()
-            navController.navigate("login")
-        }) {
-            Text(text = "Sign Out")
+        if (!isLoading && groups.isEmpty()) {
+            Text(text = "You don't have any split groups, start creating one")
         }
+        if (!isLoading && groups.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.Top, modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)) {
+                Text(text = "Your groups", color = Color.Gray)
+                groups.forEach { group ->
+                    ElevatedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .wrapContentHeight(),
+                        shape = RoundedCornerShape(2.dp),
+                        onClick = {
+                            Toast.makeText(context, group.createdBy, Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text(text = group.groupName, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(7.dp))
+                        Text(
+                            text = "${group.groupMembers.size} members",
+                            fontWeight = FontWeight.Normal,
+                            modifier = Modifier.padding(start = 7.dp, bottom = 10.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+    Button(onClick = {
+        auth.signOut()
+        navController.navigate("login")
+    }) {
+        Text(text = "Sign Out")
     }
 }
 
 @Composable
-@Preview
 fun HomeScreenPreview() {
     HomeScreen(navController = rememberNavController())
 }

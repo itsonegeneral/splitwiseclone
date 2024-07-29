@@ -2,7 +2,10 @@ package com.myapps.splitwiseclone.ui.screens.auth
 
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -23,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.Firebase
@@ -54,9 +58,12 @@ fun RegisterScreen(navController: NavController) {
     Surface {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(20.dp)
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxSize()
         ) {
-            Text(text = "Let's get started")
+            Text(text = "Let's get started", fontSize = 22.sp)
             OutlinedTextField(
                 value = fullName, onValueChange = {
                     fullName = it
@@ -84,6 +91,7 @@ fun RegisterScreen(navController: NavController) {
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation()
             )
+            Spacer(modifier = Modifier.padding(10.dp))
             if (isLoading) {
                 CircularProgressIndicator()
             } else {
