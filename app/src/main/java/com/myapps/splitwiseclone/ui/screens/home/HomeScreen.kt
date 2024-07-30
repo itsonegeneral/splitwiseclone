@@ -165,8 +165,12 @@ fun HomeScreenContent(navController: NavController) {
 
 
         if (isLoading) {
-            Text(text = "Your groups will appear here")
-            CircularProgressIndicator()
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+                Column (horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Text(text = "Getting your groups...")
+                }
+            }
         }
         if (!isLoading && groups.isEmpty()) {
             Text(text = "You don't have any split groups, start creating one")

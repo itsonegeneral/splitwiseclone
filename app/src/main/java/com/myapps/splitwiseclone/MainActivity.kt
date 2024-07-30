@@ -84,8 +84,8 @@ fun NavigationComponent(navController: NavHostController) {
             arguments = listOf(navArgument("groupId") { type = NavType.StringType },
                 navArgument("amount") { type = NavType.IntType })
         ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId")
-            val amount = backStackEntry.arguments?.getString("amount")
+            val groupId : String? = backStackEntry.arguments?.getString("groupId")
+            val amount : Int? = backStackEntry.arguments?.getInt("amount")
             CreateSplitScreen(navController, groupId, amount)
         }
     }
