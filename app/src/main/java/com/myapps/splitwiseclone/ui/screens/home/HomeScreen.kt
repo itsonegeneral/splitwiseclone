@@ -162,7 +162,12 @@ fun HomeScreenContent(navController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
-
+        Button(onClick = {
+            auth.signOut()
+            navController.navigate("login")
+        }) {
+            Text(text = "Sign Out")
+        }
 
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
@@ -215,12 +220,7 @@ fun HomeScreenContent(navController: NavController) {
             }
         }
     }
-    Button(onClick = {
-        auth.signOut()
-        navController.navigate("login")
-    }) {
-        Text(text = "Sign Out")
-    }
+
 }
 
 @Composable

@@ -22,6 +22,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -47,14 +48,18 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
 import com.myapps.splitwiseclone.R
+import com.myapps.splitwiseclone.models.ExpenseSplit
+import com.myapps.splitwiseclone.models.SplitDetail
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
+import com.myapps.splitwiseclone.ui.Routes
 import kotlinx.coroutines.tasks.await
 import kotlin.math.absoluteValue
 
@@ -119,20 +124,26 @@ fun CreateSplitScreenContent(
     val splitValues = remember { mutableStateOf(mutableMapOf<String, Int>()) }
 
 
+    val context = LocalContext.current
     var message by remember {
         mutableStateOf("")
     }
     var groupMembers by remember {
         mutableStateOf(listOf<UserAccount>())
     }
-
+    var isLoading by remember {
+        mutableStateOf(false)
+    }
 
 
     fetchObjectsByIds(groupDetail.groupMembers) {
-        val initialEqualAmount = amount / it.size
+        val initialEqualAmount = amount / (it.size - 1)
+        groupMembers = ArrayList()
         it.forEach { entry ->
-            groupMembers = groupMembers + entry.value
-            splitValues.value[entry.value.uid] = initialEqualAmount
+            if (entry.value.uid != Firebase.auth.uid) {
+                groupMembers = groupMembers + entry.value
+                splitValues.value[entry.value.uid] = initialEqualAmount
+            }
         }
     }
     Column {
@@ -229,14 +240,73 @@ fun CreateSplitScreenContent(
                 }
             }
         })
+        if (isLoading) {
+            LinearProgressIndicator()
+        }
         ElevatedButton(
-            onClick = { /*TODO*/ }, modifier = Modifier
+            onClick = {
+                isLoading = true
+                Firebase.database.reference.child("users").child(Firebase.auth.uid.toString()).get()
+                    .addOnSuccessListener {
+                        val expenseSplit = ExpenseSplit()
+                        expenseSplit.createdAt = System.currentTimeMillis()
+                        expenseSplit.message = message
+                        expenseSplit.createdBy = it.getValue(UserAccount::class.java)!!
+                        expenseSplit.totalAmount = amount.toDouble()
+                        val splitDetails = ArrayList<SplitDetail>()
+
+                        groupMembers.forEach { user ->
+                            if (splitValues.value.containsKey(user.uid)) {
+                                val splitDetail = SplitDetail()
+                                splitDetail.amount = splitValues.value[user.uid]!!.toDouble()
+                                splitDetail.isPaid = false
+                                splitDetail.userAccount = user
+                                splitDetails.add(splitDetail)
+                            }
+                        }
+
+                        expenseSplit.splitDetails = splitDetails
+
+                        val splitRef =
+                            Firebase.database.reference.child("splits").child(groupDetail.groupId)
+                                .push()
+                        expenseSplit.expenseSplitId = splitRef.key.toString()
+
+                        splitRef.setValue(expenseSplit).addOnSuccessListener {
+                            navController.navigate(Routes.groupMessagesScreen(groupId = groupDetail.groupId))
+                            isLoading = false
+                        }.addOnFailureListener {
+                            Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                            isLoading = false
+                        }
+
+                    }.addOnFailureListener {
+                        isLoading = false
+                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                    }
+
+            },
+            modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp)
+                .padding(10.dp),
         ) {
             Text(text = "Send Splits")
         }
     }
+}
+
+
+fun saveExpenseSplitRequest(
+    message: String,
+    totalAmount: Int,
+    splitInputValues: Map<String, Int>,
+    groupId: String,
+    groupDetail: SplitGroup,
+    membersData: ArrayList<UserAccount>
+) {
+
+
+    Firebase.database.reference.child("groups").child(groupId).child("")
 }
 
 fun fetchObjectsByIds(ids: List<String>, onResult: (Map<String, UserAccount>) -> Unit) {

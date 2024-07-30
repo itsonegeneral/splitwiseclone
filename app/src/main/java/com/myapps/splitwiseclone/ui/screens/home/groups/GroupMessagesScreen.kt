@@ -99,7 +99,7 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
         },
         content = {
             Box(modifier = Modifier.padding(it)) {
-                GroupMessagesScreenContent(navController = navController, groupDetail = groupDetail)
+                GroupMessagesScreenContent(navController = navController, groupId = groupId!!)
             }
         }
     )
@@ -107,7 +107,7 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GroupMessagesScreenContent(navController: NavHostController, groupDetail: SplitGroup) {
+fun GroupMessagesScreenContent(navController: NavHostController, groupId: String) {
     var inputValue by remember {
         mutableStateOf("")
     }
@@ -121,7 +121,7 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupDetail: Sp
                 .padding(16.dp)
                 .imePadding() // Adjust padding based on the keyboard's presence
         ) {
-            MessagesArea(group = groupDetail, modifier = Modifier.weight(1f))
+            MessagesArea(groupId = groupId, modifier = Modifier.weight(1f))
 
             Row(
                 modifier = Modifier
@@ -141,7 +141,7 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupDetail: Sp
                 Button(
                     onClick = {
                         if (inputValue.isDigitsOnly() && inputValue.isNotBlank()) navController.navigate(
-                            Routes.createSplitScreen(groupDetail.groupId, inputValue.toInt())
+                            Routes.createSplitScreen(groupId, inputValue.toInt())
                         ) else Toast.makeText(
                             context,
                             "Sending messages will be available soon",
@@ -159,18 +159,40 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupDetail: Sp
 
 
 @Composable
-fun MessagesArea(group: SplitGroup, modifier: Modifier = Modifier) {
+fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
+
+    var isLoading by remember {
+        mutableStateOf(false)
+    }
+
+    var splits by remember{
+        mutableStateOf(listOf<ExpenseSplit>())
+    }
+    
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        try {
+            val snapshot =
+                Firebase.database.reference.child("splits").child(groupId).get().await()
+            splits = snapshot.children.mapNotNull { it.getValue(ExpenseSplit::class.java) }
+
+        } catch (e: Exception) {
+            Toast.makeText(context, "Unable to fetch group details", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(8.dp)
     ) {
-        if (group.expenseSplits.isEmpty()) {
+        if (splits.isEmpty()) {
             Text(text = "You don't have any messages")
         } else {
             LazyColumn {
-                items(group.expenseSplits) { expense ->
-                    MessageItem(expenseSplit = expense)
+                items(splits) { split ->
+                    MessageItem(split = split,groupId= groupId)
                 }
             }
         }
@@ -178,44 +200,79 @@ fun MessagesArea(group: SplitGroup, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun MessageItem(expenseSplit: ExpenseSplit) {
-    val isCurrentUser = expenseSplit.createdBy.uid == Firebase.auth.uid
-    val unpaidMembers = expenseSplit.splitDetails.filter { member -> member.isPaid }
+fun MessageItem(split : ExpenseSplit, groupId: String) {
+    val isCurrentUser = split.createdBy.uid == Firebase.auth.uid
+    val unpaidMembers = remember(split.splitDetails) {
+        split.splitDetails.filter { member -> !member.isPaid }
+    }
+    val context = LocalContext.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
     ) {
-        Box(
-            modifier = Modifier
-                .padding(horizontal = 8.dp)
-                .background(
-                    color = if (isCurrentUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(16.dp)
-//                .shadow(4.dp)
-                .wrapContentHeight()
-        ) {
-            Column {
-                Text(
-                    text = "$${expenseSplit.totalAmount}", fontSize = 28.sp,
-                    color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.inversePrimary
-                )
-                Spacer(modifier = Modifier.padding(4.dp))
-                Text(
-                    text = expenseSplit.message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.inversePrimary
-                )
-                Text(
-                    text = if (unpaidMembers.isEmpty()) "All paid" else "${unpaidMembers.size} remaining",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.inversePrimary
-                )
-            }
+        Column {
+            Text(text = if(isCurrentUser) "You" else split.createdBy.fullName, modifier = Modifier.padding(8.dp).align(if(isCurrentUser) Alignment.End else Alignment.Start))
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .background(
+                        color = if (isCurrentUser) MaterialTheme.colorScheme.primary else Color(0xff5e9fff),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(16.dp)
+                    .wrapContentHeight()
+            ) {
+                Column {
+                    Text(
+                        text = "$${split.totalAmount}", fontSize = 28.sp,
+                        color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
+                    )
+                    Spacer(modifier = Modifier.padding(4.dp))
+                    if(split.message.isNotBlank()){
+                        Text(
+                            text = split.message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
+                        )
+                    }
+                    if (Firebase.auth.uid.toString() == split.createdBy.uid) {
+                        Text(
+                            text = if (unpaidMembers.isEmpty()) "All paid" else "${unpaidMembers.size} unpaid",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
+                        )
+                    }
+                    split.splitDetails.forEach { it ->
+                        if (it.userAccount.uid == Firebase.auth.uid && it.isPaid) {
+                            Text(text = "You paid", color = Color.White)
+                        }
+                        if (it.userAccount.uid == Firebase.auth.uid && !it.isPaid) {
+                            Button(onClick = {
+                                val updatedExpenseSplits = split.splitDetails.map { splitDetail ->
+                                    if (splitDetail.userAccount.uid == Firebase.auth.uid) {
+                                        splitDetail.copy(isPaid = true)
+                                    } else {
+                                        splitDetail
+                                    }
+                                }
+                                Firebase.database.reference.child("splits").child(groupId)
+                                    .child(split.expenseSplitId).child("splitDetails").setValue(updatedExpenseSplits)
+                                    .addOnCompleteListener {
+                                        Toast.makeText(context,"Paid", Toast.LENGTH_SHORT).show()
+                                    }.addOnFailureListener {
+                                        Toast.makeText(context,it.message, Toast.LENGTH_SHORT).show()
+                                    }
+                            }) {
+                                Text(text = "Pay")
+                            }
+                        }
+                    }
+                }
 
+            }
         }
     }
 }
