@@ -23,6 +23,8 @@ import com.myapps.splitwiseclone.ui.screens.auth.LoginScreen
 import com.myapps.splitwiseclone.ui.screens.auth.RegisterScreen
 import com.myapps.splitwiseclone.ui.screens.home.creategroup.CreateGroupScreen
 import com.myapps.splitwiseclone.ui.screens.home.creategroup.SelectGroupMembersScreen
+import com.myapps.splitwiseclone.ui.screens.home.groups.GroupMessagesScreen
+import com.myapps.splitwiseclone.ui.screens.home.groups.split.CreateSplitScreen
 import com.myapps.splitwiseclone.ui.theme.SplitwisecloneTheme
 
 class MainActivity : ComponentActivity() {
@@ -68,6 +70,23 @@ fun NavigationComponent(navController: NavHostController) {
         ) { backStackEntry ->
             val groupId = backStackEntry.arguments?.getString("groupName")
             SelectGroupMembersScreen(navController, groupId)
+        }
+        composable(
+            route = Routes.groupMessagesScreen,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val groupId = backStackEntry.arguments?.getString("groupId")
+            GroupMessagesScreen(navController, groupId)
+        }
+
+        composable(
+            route = Routes.createSplitScreen,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType },
+                navArgument("amount") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val groupId = backStackEntry.arguments?.getString("groupId")
+            val amount = backStackEntry.arguments?.getString("amount")
+            CreateSplitScreen(navController, groupId, amount)
         }
     }
 }

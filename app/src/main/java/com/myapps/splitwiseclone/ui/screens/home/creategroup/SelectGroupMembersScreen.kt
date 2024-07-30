@@ -99,7 +99,9 @@ fun SelectGroupMembersScreen(navController: NavController, groupName: String?) {
 
                     isLoading = true
                     val splitGroup = SplitGroup(createdBy = Firebase.auth.uid.toString(), groupMembers = selectedUsers as ArrayList<String>, groupName = groupName.toString())
-                    Firebase.database.reference.child("groups").push().setValue(splitGroup).addOnSuccessListener {
+                    val newChildGroup =  Firebase.database.reference.child("groups").push()
+                    splitGroup.groupId = newChildGroup.key.toString()
+                    newChildGroup.setValue(splitGroup).addOnSuccessListener {
                         isLoading = false
                         navController.navigate(Routes.homeScreen)
                     }.addOnFailureListener{

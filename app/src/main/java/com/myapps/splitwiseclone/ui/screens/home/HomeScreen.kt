@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -113,6 +114,9 @@ fun HomeScreenContent(navController: NavController) {
     var groups by remember {
         mutableStateOf(listOf<SplitGroup>())
     }
+    var filteredGroups by remember{
+        mutableStateOf(listOf<SplitGroup>())
+    }
     LaunchedEffect(Unit) {
         isLoading = true
         try {
@@ -120,7 +124,14 @@ fun HomeScreenContent(navController: NavController) {
             val groupsList =
                 snapshot.children.mapNotNull { it.getValue(SplitGroup::class.java) }
             groups = groupsList
+            groups =
+                groups.filter {
+                    it.createdBy == Firebase.auth.uid.toString() || it.groupMembers.contains(
+                        Firebase.auth.uid.toString()
+                    )
+                }
         } catch (e: Exception) {
+            Log.d(TAG, "HomeScreenContent: ${e.message}")
             Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
         }
         isLoading = false
@@ -148,7 +159,8 @@ fun HomeScreenContent(navController: NavController) {
             value = searchString,
             placeholder = { Text(text = "Search") },
             onValueChange = { searchString = it },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
 
@@ -160,26 +172,41 @@ fun HomeScreenContent(navController: NavController) {
             Text(text = "You don't have any split groups, start creating one")
         }
         if (!isLoading && groups.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.Top, modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)) {
-                Text(text = "Your groups", color = Color.Gray)
+            LazyColumn(
+                verticalArrangement = Arrangement.Top,
+                modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
+            ) {
+                item {
+                    Text(text = "Your groups", color = Color.Gray)
+                }
+
                 groups.forEach { group ->
-                    ElevatedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .wrapContentHeight(),
-                        shape = RoundedCornerShape(2.dp),
-                        onClick = {
-                            Toast.makeText(context, group.createdBy, Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        Text(text = group.groupName, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(7.dp))
-                        Text(
-                            text = "${group.groupMembers.size} members",
-                            fontWeight = FontWeight.Normal,
-                            modifier = Modifier.padding(start = 7.dp, bottom = 10.dp)
-                        )
-                    }
+                   item {  ElevatedCard(
+                       modifier = Modifier
+                           .fillMaxWidth()
+                           .padding(8.dp)
+                           .wrapContentHeight(),
+                       shape = RoundedCornerShape(2.dp),
+                       onClick = {
+                           if(group.groupId.isNotBlank()){
+                               navController.navigate(Routes.groupMessagesScreen(group.groupId))
+                           }else{
+                               Toast.makeText(context, "This group was created with previous version, kindly create new group.", Toast.LENGTH_SHORT).show()
+                           }
+
+                       }
+                   ) {
+                       Text(
+                           text = group.groupName,
+                           fontWeight = FontWeight.SemiBold,
+                           modifier = Modifier.padding(7.dp)
+                       )
+                       Text(
+                           text = "${group.groupMembers.size} members",
+                           fontWeight = FontWeight.Normal,
+                           modifier = Modifier.padding(start = 7.dp, bottom = 10.dp)
+                       )
+                   } }
                 }
             }
         }
