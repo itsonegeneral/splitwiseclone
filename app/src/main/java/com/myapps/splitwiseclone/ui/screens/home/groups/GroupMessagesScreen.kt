@@ -1,7 +1,6 @@
 package com.myapps.splitwiseclone.ui.screens.home.groups
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -20,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -53,11 +49,11 @@ import androidx.navigation.compose.rememberNavController
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.database.database
+import com.myapps.splitwiseclone.DatabaseKeys
 import com.myapps.splitwiseclone.R
 import com.myapps.splitwiseclone.models.ExpenseSplit
 import com.myapps.splitwiseclone.models.SplitDetail
 import com.myapps.splitwiseclone.models.SplitGroup
-import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
 import com.myapps.splitwiseclone.ui.components.CustomLoading
 import com.myapps.splitwiseclone.ui.components.KeyboardAware
@@ -72,7 +68,7 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
     var menuExpanded by remember { mutableStateOf(false) }
 
 
-    var groupDetail by remember {
+    var splitGroup by remember {
         mutableStateOf(SplitGroup())
     }
     val context = LocalContext.current
@@ -80,7 +76,7 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
         try {
             val snapshot =
                 Firebase.database.reference.child("groups").child(groupId.toString()).get().await()
-            groupDetail = snapshot.getValue(SplitGroup::class.java)!!
+            splitGroup = snapshot.getValue(SplitGroup::class.java)!!
 
         } catch (e: Exception) {
             Toast.makeText(context, "Unable to fetch group details", Toast.LENGTH_SHORT).show()
@@ -90,7 +86,7 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("${groupDetail.groupName} Splits") },
+                title = { Text("${splitGroup.groupName} Splits") },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White // Optional: to set the text color
@@ -122,6 +118,21 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
                                 menuExpanded = false
                                 // Handle edit group action here
                                 navController.navigate(Routes.groupEditScreen((groupId!!)))
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(text = "Exit Group")},
+                            onClick = {
+                                menuExpanded = false
+                                splitGroup.groupMembers.remove(Firebase.auth.uid)
+                                Firebase.database.reference.child(DatabaseKeys.splitGroups).child(splitGroup.groupId).setValue(splitGroup).addOnCompleteListener {
+                                    if(it.isSuccessful){
+                                        Toast.makeText(context,"Exited group",Toast.LENGTH_SHORT).show()
+                                        navController.navigate(Routes.homeScreen)
+                                    }else{
+                                        Toast.makeText(context,"Unable to exit group,try again",Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             }
                         )
                     }

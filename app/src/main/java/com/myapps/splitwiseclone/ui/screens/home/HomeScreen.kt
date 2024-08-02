@@ -211,7 +211,7 @@ fun HomeScreenContent(navController: NavController) {
                            modifier = Modifier.padding(7.dp)
                        )
                        Text(
-                           text = "${group.groupMembers.size + 1} members",
+                           text = "${group.groupMembers.size} members",
                            fontWeight = FontWeight.Normal,
                            modifier = Modifier.padding(start = 7.dp, bottom = 10.dp)
                        )

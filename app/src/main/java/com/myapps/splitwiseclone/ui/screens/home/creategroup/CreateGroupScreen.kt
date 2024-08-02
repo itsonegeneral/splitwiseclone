@@ -29,7 +29,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import com.google.firebase.database.database
 import com.myapps.splitwiseclone.R
+import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.ui.Routes
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -70,6 +74,11 @@ fun CreateGroupScreen(navController: NavController) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateGroupScreenContent(navController: NavController) {
+
+    var usersSelectionOpened by remember {
+        mutableStateOf(false)
+    }
+
     var groupName by remember {
         mutableStateOf("")
     }
@@ -82,9 +91,35 @@ fun CreateGroupScreenContent(navController: NavController) {
                 Toast.makeText(context,"Group name cannot be blank",Toast.LENGTH_SHORT).show()
                 return@Button
             }
-            navController.navigate(Routes.createGroupSelectMembersScreen(groupName))
+            usersSelectionOpened = true
         }) {
             Text(text = "Next")
+        }
+        if(usersSelectionOpened){
+            SelectGroupMembersScreen {
+                usersSelectionOpened = false
+                var selectedUsers = it
+                selectedUsers = selectedUsers + Firebase.auth.uid.toString()
+                val splitGroup = SplitGroup(
+                    createdBy = Firebase.auth.uid.toString(),
+                    groupMembers = selectedUsers as ArrayList<String>,
+                    groupName = groupName
+                )
+                val newChildGroup = Firebase.database.reference.child("groups").push()
+                splitGroup.groupId = newChildGroup.key.toString()
+                newChildGroup.setValue(splitGroup).addOnSuccessListener {
+//                    isLoading = false
+                    navController.navigate(Routes.homeScreen)
+                }.addOnFailureListener {
+//                    isLoading = false
+                    Toast.makeText(
+                        context,
+                        "Unable to create, try again ${it.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                }
+            }
         }
     }
 }

@@ -70,7 +70,9 @@ fun NavigationComponent(navController: NavHostController) {
             arguments = listOf(navArgument("groupName") { type = NavType.StringType })
         ) { backStackEntry ->
             val groupId = backStackEntry.arguments?.getString("groupName")
-            SelectGroupMembersScreen(navController, groupId)
+            SelectGroupMembersScreen(){
+
+            }
         }
         composable(
             route = Routes.groupMessagesScreen,

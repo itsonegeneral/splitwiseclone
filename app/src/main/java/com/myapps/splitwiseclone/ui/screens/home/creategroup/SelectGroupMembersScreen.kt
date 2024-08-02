@@ -10,11 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,7 +26,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,17 +41,19 @@ import androidx.navigation.NavController
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.database.database
+import com.myapps.splitwiseclone.DatabaseKeys
 import com.myapps.splitwiseclone.R
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
 import kotlinx.coroutines.tasks.await
-import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SelectGroupMembersScreen(navController: NavController, groupName: String?) {
+fun SelectGroupMembersScreen(
+    onUsersSelected: (List<String>) -> Unit
+) {
 
     var selectedUsers by remember {
         mutableStateOf(listOf<String>())
@@ -73,13 +71,13 @@ fun SelectGroupMembersScreen(navController: NavController, groupName: String?) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Group") },
+                title = { Text("Select Users") },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White // Optional: to set the text color
                 ),
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { onUsersSelected(emptyList()) }) {
                         Icon(
                             painter = painterResource(id = R.drawable.baseline_arrow_back_24),
                             contentDescription = "Back",
@@ -92,23 +90,12 @@ fun SelectGroupMembersScreen(navController: NavController, groupName: String?) {
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
-                    if(selectedUsers.isEmpty()){
-                        Toast.makeText(context,"No members selected",Toast.LENGTH_SHORT).show()
+                    if (selectedUsers.isEmpty()) {
+                        Toast.makeText(context, "No members selected", Toast.LENGTH_SHORT).show()
                         return@ExtendedFloatingActionButton
                     }
-                    isLoading = true
-                    selectedUsers = selectedUsers + Firebase.auth.uid.toString()
-                    val splitGroup = SplitGroup(createdBy = Firebase.auth.uid.toString(), groupMembers = selectedUsers as ArrayList<String>, groupName = groupName.toString())
-                    val newChildGroup =  Firebase.database.reference.child("groups").push()
-                    splitGroup.groupId = newChildGroup.key.toString()
-                    newChildGroup.setValue(splitGroup).addOnSuccessListener {
-                        isLoading = false
-                        navController.navigate(Routes.homeScreen)
-                    }.addOnFailureListener{
-                        isLoading = false
-                        Toast.makeText(context,"Unable to create, try again ${it.message}",Toast.LENGTH_SHORT).show()
 
-                    }
+                    onUsersSelected(selectedUsers)
                 },
                 text = { Text(text = "Create") },
                 icon = {
@@ -130,7 +117,9 @@ fun SelectGroupMembersScreen(navController: NavController, groupName: String?) {
                 LaunchedEffect(Unit) {
                     isLoading = true
                     try {
-                        val snapshot = Firebase.database.reference.child("users").get().await()
+                        val snapshot =
+                            Firebase.database.reference.child(DatabaseKeys.userAccounts).get()
+                                .await()
                         val userList =
                             snapshot.children.mapNotNull { it.getValue(UserAccount::class.java) }
                         users = userList
@@ -152,7 +141,7 @@ fun SelectGroupMembersScreen(navController: NavController, groupName: String?) {
 
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Add your friends to $groupName group",
+                        text = "Add your friends to group",
                         fontSize = 22.sp,
                         modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)
                     )

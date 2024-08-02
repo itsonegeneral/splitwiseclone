@@ -143,7 +143,16 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
             onValueChange =
             { updatedGroupName = it })
         Spacer(modifier = Modifier.padding(12.dp))
-        Text(text = "Members", fontSize = 20.sp)
+        Row (verticalAlignment = Alignment.CenterVertically){
+            Text(text = "Members", fontSize = 20.sp, modifier = Modifier.fillMaxWidth(.8f))
+            IconButton(onClick = {
+            }, modifier = Modifier.fillMaxWidth(1f)) {
+                Icon(
+                    painter = painterResource(id = R.drawable.baseline_add_24),
+                    contentDescription = "Add",
+                )
+            }
+        }
 
         if (splitGroupMembers.isEmpty() && !isLoading) {
             Text(text = "No members in this group", textAlign = TextAlign.Center)
