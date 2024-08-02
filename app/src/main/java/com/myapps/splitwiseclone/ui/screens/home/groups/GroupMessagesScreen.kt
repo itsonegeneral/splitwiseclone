@@ -1,6 +1,7 @@
 package com.myapps.splitwiseclone.ui.screens.home.groups
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +20,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,6 +55,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.database.database
 import com.myapps.splitwiseclone.R
 import com.myapps.splitwiseclone.models.ExpenseSplit
+import com.myapps.splitwiseclone.models.SplitDetail
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
@@ -62,6 +67,9 @@ import kotlinx.coroutines.tasks.await
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
+
+    var menuExpanded by remember { mutableStateOf(false) }
+
 
     var groupDetail by remember {
         mutableStateOf(SplitGroup())
@@ -92,6 +100,28 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
                             painter = painterResource(id = R.drawable.baseline_arrow_back_24),
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.baseline_more_vert_24),
+                            contentDescription = "Menu",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(text = "Edit Group")},
+                            onClick = {
+                                menuExpanded = false
+                                // Handle edit group action here
+                                navController.navigate(Routes.groupEditScreen((groupId!!)))
+                            }
                         )
                     }
                 }
@@ -165,12 +195,13 @@ fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
         mutableStateOf(false)
     }
 
-    var splits by remember{
+    var splits by remember {
         mutableStateOf(listOf<ExpenseSplit>())
     }
-    
+
     val context = LocalContext.current
     LaunchedEffect(Unit) {
+        isLoading = true
         try {
             val snapshot =
                 Firebase.database.reference.child("splits").child(groupId).get().await()
@@ -179,8 +210,13 @@ fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
         } catch (e: Exception) {
             Toast.makeText(context, "Unable to fetch group details", Toast.LENGTH_SHORT).show()
         }
+        isLoading = false
+
     }
 
+    if (isLoading) {
+        CircularProgressIndicator()
+    }
 
     Column(
         modifier = modifier
@@ -192,7 +228,7 @@ fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
         } else {
             LazyColumn {
                 items(splits) { split ->
-                    MessageItem(split = split,groupId= groupId)
+                    MessageItem(split = split, groupId = groupId)
                 }
             }
         }
@@ -200,12 +236,11 @@ fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun MessageItem(split : ExpenseSplit, groupId: String) {
+fun MessageItem(split: ExpenseSplit, groupId: String) {
     val isCurrentUser = split.createdBy.uid == Firebase.auth.uid
     val unpaidMembers = remember(split.splitDetails) {
         split.splitDetails.filter { member -> !member.isPaid }
     }
-    val context = LocalContext.current
 
     Row(
         modifier = Modifier
@@ -214,66 +249,97 @@ fun MessageItem(split : ExpenseSplit, groupId: String) {
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
     ) {
         Column {
-            Text(text = if(isCurrentUser) "You" else split.createdBy.fullName, modifier = Modifier.padding(8.dp).align(if(isCurrentUser) Alignment.End else Alignment.Start))
+            Text(
+                text = if (isCurrentUser) "You" else split.createdBy.fullName, modifier = Modifier
+                    .padding(8.dp)
+                    .align(if (isCurrentUser) Alignment.End else Alignment.Start)
+            )
             Box(
                 modifier = Modifier
                     .padding(horizontal = 8.dp)
                     .background(
-                        color = if (isCurrentUser) MaterialTheme.colorScheme.primary else Color(0xff5e9fff),
+                        color = if (isCurrentUser) MaterialTheme.colorScheme.primary else Color(
+                            0xff5e9fff
+                        ),
                         shape = RoundedCornerShape(8.dp)
                     )
                     .padding(16.dp)
                     .wrapContentHeight()
             ) {
                 Column {
-                    Text(
-                        text = "$${split.totalAmount}", fontSize = 28.sp,
-                        color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
-                    )
-                    Spacer(modifier = Modifier.padding(4.dp))
-                    if(split.message.isNotBlank()){
-                        Text(
-                            text = split.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
-                        )
-                    }
-                    if (Firebase.auth.uid.toString() == split.createdBy.uid) {
-                        Text(
-                            text = if (unpaidMembers.isEmpty()) "All paid" else "${unpaidMembers.size} unpaid",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
-                        )
-                    }
-                    split.splitDetails.forEach { it ->
-                        if (it.userAccount.uid == Firebase.auth.uid && it.isPaid) {
-                            Text(text = "You paid", color = Color.White)
-                        }
-                        if (it.userAccount.uid == Firebase.auth.uid && !it.isPaid) {
-                            Button(onClick = {
-                                val updatedExpenseSplits = split.splitDetails.map { splitDetail ->
-                                    if (splitDetail.userAccount.uid == Firebase.auth.uid) {
-                                        splitDetail.copy(isPaid = true)
-                                    } else {
-                                        splitDetail
-                                    }
-                                }
-                                Firebase.database.reference.child("splits").child(groupId)
-                                    .child(split.expenseSplitId).child("splitDetails").setValue(updatedExpenseSplits)
-                                    .addOnCompleteListener {
-                                        Toast.makeText(context,"Paid", Toast.LENGTH_SHORT).show()
-                                    }.addOnFailureListener {
-                                        Toast.makeText(context,it.message, Toast.LENGTH_SHORT).show()
-                                    }
-                            }) {
-                                Text(text = "Pay")
-                            }
-                        }
-                    }
+                    SplitDetailMessage(split, isCurrentUser, unpaidMembers, groupId)
                 }
 
             }
         }
+    }
+}
+
+@Composable
+private fun SplitDetailMessage(
+    split: ExpenseSplit,
+    isCurrentUser: Boolean,
+    unpaidMembers: List<SplitDetail>,
+    groupId: String
+) {
+    Text(
+        text = "$${split.totalAmount}", fontSize = 28.sp,
+        color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
+    )
+    Spacer(modifier = Modifier.padding(4.dp))
+    if (split.message.isNotBlank()) {
+        Text(
+            text = split.message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
+        )
+    }
+    if (Firebase.auth.uid.toString() == split.createdBy.uid) {
+        Text(
+            text = if (unpaidMembers.isEmpty()) "All paid" else "${unpaidMembers.size} unpaid",
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
+        )
+    }
+    var isMemeberInSplit = false
+    split.splitDetails.forEach { it ->
+        if (it.userAccount.uid == Firebase.auth.uid && it.isPaid) {
+            Text(text = "You paid", color = Color.White)
+            isMemeberInSplit = true
+        }
+        if (it.userAccount.uid == Firebase.auth.uid && !it.isPaid) {
+            isMemeberInSplit = true
+            PayButton(split, groupId)
+        }
+    }
+    if (!isMemeberInSplit && Firebase.auth.uid != split.createdBy.uid) {
+        Text(text = "No due", color = Color.White)
+    }
+}
+
+@Composable
+private fun PayButton(
+    split: ExpenseSplit,
+    groupId: String
+) {
+    val context = LocalContext.current
+    Button(onClick = {
+        val updatedExpenseSplits = split.splitDetails.map { splitDetail ->
+            if (splitDetail.userAccount.uid == Firebase.auth.uid) {
+                splitDetail.copy(isPaid = true)
+            } else {
+                splitDetail
+            }
+        }
+        Firebase.database.reference.child("splits").child(groupId)
+            .child(split.expenseSplitId).child("splitDetails").setValue(updatedExpenseSplits)
+            .addOnCompleteListener {
+                Toast.makeText(context, "Paid", Toast.LENGTH_SHORT).show()
+            }.addOnFailureListener {
+                Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+            }
+    }) {
+        Text(text = "Pay")
     }
 }
 

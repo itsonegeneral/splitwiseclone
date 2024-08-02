@@ -12,6 +12,10 @@ class Routes {
         val groupMessagesScreen = "groupMessages/{groupId}"
         fun groupMessagesScreen(groupId: String) = "groupMessages/${groupId}"
 
+        val groupEditScreen = "groupEdit/{groupId}"
+        fun groupEditScreen(groupId: String) = "groupEdit/${groupId}"
+
+
         val createSplitScreen = "createSplit/{groupId}/{amount}"
         fun createSplitScreen(groupId: String, amount : Int) = "createSplit/$groupId/$amount"
 
