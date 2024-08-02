@@ -211,7 +211,7 @@ fun HomeScreenContent(navController: NavController) {
                 modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
             ) {
                 item {
-                    Text(text = "Your groups", color = Color.Gray)
+                    Text(text = "Your groups", color = Color.Gray, modifier= Modifier.padding(top = 15.dp, bottom = 8.dp))
                 }
 
                 groups.forEach { group ->
