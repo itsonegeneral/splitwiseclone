@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,6 +51,7 @@ import com.myapps.splitwiseclone.R
 import com.myapps.splitwiseclone.helpers.fetchObjectsByIds
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
+import com.myapps.splitwiseclone.ui.Routes
 import com.myapps.splitwiseclone.ui.components.CustomLoading
 import kotlinx.coroutines.tasks.await
 
@@ -91,6 +94,14 @@ fun EditGroupScreen(navController: NavController, groupId: String?) {
 @Composable
 fun EditGroupScreenContent(navController: NavController, groupId: String) {
 
+    var updatedGroupName by remember {
+        mutableStateOf("")
+    }
+
+    var updatedGroupMembers by remember {
+        mutableStateOf(arrayListOf<String>())
+    }
+
     var splitGroup by remember {
         mutableStateOf(SplitGroup())
     }
@@ -100,20 +111,19 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
     var isLoading = false
     val context = LocalContext.current
 
-    fetchObjectsByIds(splitGroup.groupMembers) {
-        splitGroupMembers = ArrayList()
-        it.forEach { entry ->
-            if (entry.value.uid != Firebase.auth.uid) {
-                splitGroupMembers = splitGroupMembers + entry.value
-            }
-        }
-    }
-
     LaunchedEffect(Unit) {
         isLoading = false
         try {
             val snapshot = Firebase.database.reference.child("groups").child(groupId).get().await()
             splitGroup = snapshot.getValue(SplitGroup::class.java)!!
+            updatedGroupName = splitGroup.groupName
+            updatedGroupMembers = splitGroup.groupMembers
+            fetchObjectsByIds(splitGroup.groupMembers) {
+                splitGroupMembers = ArrayList()
+                it.forEach { entry ->
+                    splitGroupMembers = splitGroupMembers + entry.value
+                }
+            }
         } catch (e: Exception) {
             Toast.makeText(context, "Unable to fetch group details", Toast.LENGTH_SHORT).show()
         }
@@ -129,11 +139,16 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
         Text(text = "Group Name", fontSize = 20.sp)
         Spacer(modifier = Modifier.padding(8.dp))
         OutlinedTextField(modifier = Modifier.fillMaxWidth(),
-            value = splitGroup.groupName,
+            value = updatedGroupName,
             onValueChange =
-            { splitGroup.groupName = it })
+            { updatedGroupName = it })
         Spacer(modifier = Modifier.padding(12.dp))
         Text(text = "Members", fontSize = 20.sp)
+
+        if (splitGroupMembers.isEmpty() && !isLoading) {
+            Text(text = "No members in this group", textAlign = TextAlign.Center)
+        }
+
         LazyColumn(content = {
             splitGroupMembers.forEach {
                 item {
@@ -175,33 +190,53 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
                                 )
                                 Text(text = it.email, style = MaterialTheme.typography.bodyMedium)
                                 Spacer(modifier = Modifier.padding(4.dp))
-                                IconButton(onClick = {
-                                    removeMemberFromGroup(it.uid,context, groupId = groupId){
 
-                                    }
-                                }) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.baseline_remove_24),
-                                        contentDescription = "Remove",
-                                    )
+                            }
+                            IconButton(onClick = {
+                                if(it.uid == Firebase.auth.uid){
+                                    //Cannot remove self, only can exit
+                                    Toast.makeText(context,"You cannot remove yourself, you can exit either",Toast.LENGTH_SHORT).show()
+                                }else {
+                                    updatedGroupMembers.remove(it.uid)
                                 }
+                            }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.baseline_remove_24),
+                                    contentDescription = "Remove",
+                                )
                             }
                         }
                     }
                 }
             }
         })
+        Button(onClick = {
+            splitGroup.groupName = updatedGroupName
+            splitGroup.groupMembers = updatedGroupMembers as ArrayList<String>
+            isLoading = true
+            updateSplitGroup(splitGroup = splitGroup) { isSuccess ->
+                isLoading = false
+                if (isSuccess) {
+                    Toast.makeText(context, "Group updated", Toast.LENGTH_SHORT).show()
+                    navController.navigate(Routes.groupMessagesScreen(groupId))
+                } else {
+                    Toast.makeText(context, "Failed to update, try again", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }) {
+            Text(modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, text = "Update")
+        }
     }
 }
 
-fun removeMemberFromGroup(
-    uid: String,
-    context: Context,
-    groupId: String,
-    onComplete: (Boolean) -> Unit
-) {
-    Firebase.database.reference.child("groups").child(groupId).child("groupMeme")
+fun updateSplitGroup(splitGroup: SplitGroup, onComplete: (Boolean) -> Unit) {
+    Firebase.database.reference.child("groups").child(splitGroup.groupId).setValue(splitGroup)
+        .addOnCompleteListener {
+            onComplete(it.isSuccessful)
+        }
 }
+
 
 @Composable
 @Preview

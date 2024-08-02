@@ -96,8 +96,8 @@ fun SelectGroupMembersScreen(navController: NavController, groupName: String?) {
                         Toast.makeText(context,"No members selected",Toast.LENGTH_SHORT).show()
                         return@ExtendedFloatingActionButton
                     }
-
                     isLoading = true
+                    selectedUsers = selectedUsers + Firebase.auth.uid.toString()
                     val splitGroup = SplitGroup(createdBy = Firebase.auth.uid.toString(), groupMembers = selectedUsers as ArrayList<String>, groupName = groupName.toString())
                     val newChildGroup =  Firebase.database.reference.child("groups").push()
                     splitGroup.groupId = newChildGroup.key.toString()

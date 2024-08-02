@@ -59,6 +59,7 @@ import com.myapps.splitwiseclone.models.SplitDetail
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
+import com.myapps.splitwiseclone.ui.components.CustomLoading
 import com.myapps.splitwiseclone.ui.components.KeyboardAware
 import kotlinx.coroutines.tasks.await
 
@@ -74,7 +75,7 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
     var groupDetail by remember {
         mutableStateOf(SplitGroup())
     }
-    var context = LocalContext.current
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         try {
             val snapshot =
@@ -215,7 +216,7 @@ fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
     }
 
     if (isLoading) {
-        CircularProgressIndicator()
+        CustomLoading()
     }
 
     Column(
@@ -223,7 +224,7 @@ fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
             .fillMaxSize()
             .padding(8.dp)
     ) {
-        if (splits.isEmpty()) {
+        if (splits.isEmpty() && !isLoading) {
             Text(text = "You don't have any messages")
         } else {
             LazyColumn {
@@ -282,18 +283,19 @@ private fun SplitDetailMessage(
     unpaidMembers: List<SplitDetail>,
     groupId: String
 ) {
+    if (split.message.isNotBlank()) {
+        Text(
+            text = "For '${split.message}'",
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
+        )
+        Spacer(modifier = Modifier.padding(4.dp))
+    }
     Text(
         text = "$${split.totalAmount}", fontSize = 28.sp,
         color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
     )
     Spacer(modifier = Modifier.padding(4.dp))
-    if (split.message.isNotBlank()) {
-        Text(
-            text = split.message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
-        )
-    }
     if (Firebase.auth.uid.toString() == split.createdBy.uid) {
         Text(
             text = if (unpaidMembers.isEmpty()) "All paid" else "${unpaidMembers.size} unpaid",

@@ -140,10 +140,13 @@ fun CreateSplitScreenContent(
 
 
     fetchObjectsByIds(groupDetail.groupMembers) {
+        if(it.isEmpty()){
+            return@fetchObjectsByIds
+        }
         val initialEqualAmount = amount / (it.size - 1)
         groupMembers = ArrayList()
         it.forEach { entry ->
-            if (entry.value.uid != Firebase.auth.uid) {
+            if (entry.value.uid != Firebase.auth.uid && entry.value.uid == groupDetail.createdBy) {
                 groupMembers = groupMembers + entry.value
                 splitValues.value[entry.value.uid] = initialEqualAmount
             }
