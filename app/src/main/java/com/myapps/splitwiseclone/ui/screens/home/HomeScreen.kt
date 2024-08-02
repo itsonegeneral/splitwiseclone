@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -55,10 +57,12 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.database.database
+import com.myapps.splitwiseclone.DatabaseKeys
 import com.myapps.splitwiseclone.R
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
+import com.myapps.splitwiseclone.ui.screens.home.creategroup.SelectionState
 import kotlinx.coroutines.tasks.await
 
 
@@ -69,6 +73,8 @@ private const val TAG = "HomeScreen"
 @Composable
 fun HomeScreen(navController: NavController) {
 
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -76,12 +82,37 @@ fun HomeScreen(navController: NavController) {
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White // Optional: to set the text color
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.baseline_more_vert_24),
+                            contentDescription = "Menu",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(text = "Logout")},
+                            onClick = {
+                                menuExpanded = false
+                                // Handle edit group action here
+                                Firebase.auth.signOut()
+                                navController.navigate(Routes.loginScreen)
+                            }
+                        )
+                    }
+                },
             )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { navController.navigate(Routes.createGroupScreen) },
+                onClick = {
+                    SelectionState.selectedUsers.clear()
+                    navController.navigate(Routes.createGroupScreen) },
                 text = { Text(text = "New Group") },
                 icon = {
                     Icon(
@@ -162,12 +193,6 @@ fun HomeScreenContent(navController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
-        Button(onClick = {
-            auth.signOut()
-            navController.navigate("login")
-        }) {
-            Text(text = "Sign Out")
-        }
 
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
@@ -178,7 +203,7 @@ fun HomeScreenContent(navController: NavController) {
             }
         }
         if (!isLoading && groups.isEmpty()) {
-            Text(text = "You don't have any split groups, start creating one")
+            Text(text = "You don't have any split groups, start creating one", modifier = Modifier.padding(20.dp))
         }
         if (!isLoading && groups.isNotEmpty()) {
             LazyColumn(

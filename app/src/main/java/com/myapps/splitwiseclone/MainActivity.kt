@@ -1,6 +1,7 @@
 package com.myapps.splitwiseclone
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,7 @@ import com.myapps.splitwiseclone.ui.screens.auth.RegisterScreen
 import com.myapps.splitwiseclone.ui.screens.home.creategroup.CreateGroupScreen
 import com.myapps.splitwiseclone.ui.screens.home.creategroup.EditGroupScreen
 import com.myapps.splitwiseclone.ui.screens.home.creategroup.SelectGroupMembersScreen
+import com.myapps.splitwiseclone.ui.screens.home.creategroup.SelectionState
 import com.myapps.splitwiseclone.ui.screens.home.groups.GroupMessagesScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.split.CreateSplitScreen
 import com.myapps.splitwiseclone.ui.theme.SplitwisecloneTheme
@@ -47,6 +49,8 @@ class MainActivity : ComponentActivity() {
 }
 
 
+private const val TAG = "MainActivity"
+
 @Composable
 fun NavigationComponent(navController: NavHostController) {
     val auth = Firebase.auth
@@ -64,15 +68,11 @@ fun NavigationComponent(navController: NavHostController) {
 
 
         composable(Routes.homeScreen) { HomeScreen(navController = navController) }
-        composable(Routes.createGroupScreen) { CreateGroupScreen(navController = navController) }
-        composable(
-            route = Routes.createGroupSelectMembersScreen,
-            arguments = listOf(navArgument("groupName") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupName")
-            SelectGroupMembersScreen(){
-
-            }
+        composable(Routes.createGroupScreen) {
+            CreateGroupScreen(navController = navController)
+        }
+        composable(Routes.selectGroupSelectMembersScreen) {
+            SelectGroupMembersScreen(navController)
         }
         composable(
             route = Routes.groupMessagesScreen,
@@ -94,8 +94,8 @@ fun NavigationComponent(navController: NavHostController) {
             arguments = listOf(navArgument("groupId") { type = NavType.StringType },
                 navArgument("amount") { type = NavType.IntType })
         ) { backStackEntry ->
-            val groupId : String? = backStackEntry.arguments?.getString("groupId")
-            val amount : Int? = backStackEntry.arguments?.getInt("amount")
+            val groupId: String? = backStackEntry.arguments?.getString("groupId")
+            val amount: Int? = backStackEntry.arguments?.getInt("amount")
             CreateSplitScreen(navController, groupId, amount)
         }
     }

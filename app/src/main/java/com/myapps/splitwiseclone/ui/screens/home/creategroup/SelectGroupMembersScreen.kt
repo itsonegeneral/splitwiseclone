@@ -1,6 +1,7 @@
 package com.myapps.splitwiseclone.ui.screens.home.creategroup
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -39,34 +40,45 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import com.google.firebase.database.database
 import com.myapps.splitwiseclone.DatabaseKeys
 import com.myapps.splitwiseclone.R
-import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
-import com.myapps.splitwiseclone.ui.Routes
+import com.myapps.splitwiseclone.ui.components.CustomLoading
 import kotlinx.coroutines.tasks.await
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectGroupMembersScreen(
-    onUsersSelected: (List<String>) -> Unit
+    navController : NavController
 ) {
 
-    var selectedUsers by remember {
-        mutableStateOf(listOf<String>())
+    var isLoading by remember {
+        mutableStateOf(false)
     }
 
     var users by remember {
         mutableStateOf(listOf<UserAccount>())
     }
-    val context = LocalContext.current
 
-    var isLoading by remember {
-        mutableStateOf(false)
+    val context = LocalContext.current
+    var selectedUsers by remember {
+        mutableStateOf(listOf<String>())
     }
+
+    LaunchedEffect(Unit) {
+        isLoading = true
+        try {
+            val snapshot = Firebase.database.reference.child(DatabaseKeys.userAccounts).get().await()
+            users = snapshot.children.mapNotNull { it.getValue(UserAccount::class.java) }
+        } catch (e: Exception) {
+            Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+        }
+        isLoading = false
+    }
+
+
 
     Scaffold(
         topBar = {
@@ -77,7 +89,7 @@ fun SelectGroupMembersScreen(
                     titleContentColor = Color.White // Optional: to set the text color
                 ),
                 navigationIcon = {
-                    IconButton(onClick = { onUsersSelected(emptyList()) }) {
+                    IconButton(onClick = {navController.popBackStack()}) {
                         Icon(
                             painter = painterResource(id = R.drawable.baseline_arrow_back_24),
                             contentDescription = "Back",
@@ -93,11 +105,12 @@ fun SelectGroupMembersScreen(
                     if (selectedUsers.isEmpty()) {
                         Toast.makeText(context, "No members selected", Toast.LENGTH_SHORT).show()
                         return@ExtendedFloatingActionButton
+                    }else{
+                        SelectionState.selectedUsers = ArrayList(selectedUsers.toList())
+                        navController.popBackStack()
                     }
-
-                    onUsersSelected(selectedUsers)
                 },
-                text = { Text(text = "Create") },
+                text = { Text(text = "Confirm") },
                 icon = {
                     Icon(
                         painter = painterResource(id = R.drawable.baseline_check_24),
@@ -114,71 +127,74 @@ fun SelectGroupMembersScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                LaunchedEffect(Unit) {
-                    isLoading = true
-                    try {
-                        val snapshot =
-                            Firebase.database.reference.child(DatabaseKeys.userAccounts).get()
-                                .await()
-                        val userList =
-                            snapshot.children.mapNotNull { it.getValue(UserAccount::class.java) }
-                        users = userList
-                    } catch (e: Exception) {
-                        Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
-                    }
-                    isLoading = false
-                }
 
                 if (isLoading) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Column {
-                            CircularProgressIndicator()
-                            Text(text = if (isLoading && selectedUsers.isEmpty()) "Getting your friends list..." else "Creating your group, hang on.")
-                        }
-                    }
-                    return@Scaffold
+                    CustomLoading()
                 }
-
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Add your friends to group",
-                        fontSize = 22.sp,
-                        modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)
-                    )
-                    users.forEach { user ->
-                        ElevatedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .wrapContentHeight()
-                                .border(
-                                    width = 2.dp,
-                                    color = if (selectedUsers.contains(user.uid)) Color.Blue else Color.Transparent // Change border color based on selection
-                                )
-                                .height(55.dp),
-                            shape = RoundedCornerShape(2.dp),
-                            onClick = {
-                                selectedUsers = if (selectedUsers.contains(user.uid)) {
-                                    selectedUsers - user.uid
-                                } else {
-                                    selectedUsers + user.uid
-                                }
-                            },
-                        ) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.padding(8.dp)
-                            ) {
-                                Text(text = user.fullName, fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    text = String.format("%.0f", user.contactNumber),
-                                    fontWeight = FontWeight.Normal
-                                )
-                            }
-                        }
-                    }
+                SelectGroupMembersContent(users, selectedUsers){
+                    selectedUsers = it
                 }
             }
         }
     )
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun SelectGroupMembersContent(
+    users: List<UserAccount>,
+    selectedUsers: List<String>,
+    setSelectedUsers: (List<String>) -> Unit
+) {
+    var selectedUsers1 = selectedUsers
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "Add your friends to group",
+            fontSize = 22.sp,
+            modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)
+        )
+        users.forEach { user ->
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .wrapContentHeight()
+                    .border(
+                        width = 2.dp,
+                        color = if (selectedUsers1.contains(user.uid)) Color.Blue else Color.Transparent // Change border color based on selection
+                    )
+                    .height(55.dp),
+                shape = RoundedCornerShape(2.dp),
+                onClick = {
+                    selectedUsers1 = if (selectedUsers1.contains(user.uid)) {
+                        selectedUsers1 - user.uid
+                    } else {
+                        selectedUsers1 + user.uid
+                    }
+                    setSelectedUsers(selectedUsers1)
+                },
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Text(text = user.fullName, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = String.format("%.0f", user.contactNumber),
+                        fontWeight = FontWeight.Normal
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun SelectGroupMembersContent(setSelectedUsers:(List<String>)->Unit) {
+
+
+
+
+
 }
