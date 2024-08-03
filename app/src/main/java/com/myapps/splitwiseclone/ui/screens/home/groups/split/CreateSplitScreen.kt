@@ -1,6 +1,8 @@
 package com.myapps.splitwiseclone.ui.screens.home.groups.split
 
+import android.app.DatePickerDialog
 import android.content.Context
+import android.widget.DatePicker
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -17,9 +19,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -52,13 +57,19 @@ import com.google.firebase.auth.auth
 import com.google.firebase.database.database
 import com.myapps.splitwiseclone.DatabaseKeys
 import com.myapps.splitwiseclone.R
+import com.myapps.splitwiseclone.constants.SplitModes
+import com.myapps.splitwiseclone.helpers.DateHelper.Companion.convertDateStringToMillis
 import com.myapps.splitwiseclone.helpers.fetchObjectsByIds
 import com.myapps.splitwiseclone.models.ExpenseSplit
+import com.myapps.splitwiseclone.models.ScheduledSplit
 import com.myapps.splitwiseclone.models.SplitDetail
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,6 +129,7 @@ fun CreateSplitScreen(navController: NavHostController, groupId: String?, amount
                     amount = amount!!,
                     groupMembers = groupMembers
                 )
+
             }
         }
     )
@@ -134,8 +146,13 @@ fun CreateSplitScreenContent(
 
     val splitValues = remember { mutableStateOf(mutableMapOf<String, Int>()) }
 
-    var refresher by remember {
-        mutableStateOf(0)
+    var selectedDate by remember {
+        mutableStateOf("")
+    }
+
+    //Split types are single, recurring, schedule
+    var splitMode by remember {
+        mutableStateOf(SplitModes.Single)
     }
 
     LaunchedEffect(groupMembers) {
@@ -164,9 +181,16 @@ fun CreateSplitScreenContent(
     }
 
     Column {
-        //Reccuring Splits Dev
-        
-        Spacer(modifier = Modifier.padding(30.dp))
+        //Recurring Splits Dev
+        SplitModeDropdownMenuBox(selectedValue = splitMode) {
+            splitMode = it
+        }
+        if (splitMode == SplitModes.Scheduled) {
+            DateSelectionInput(selectedDate = selectedDate) {
+                selectedDate = it
+            }
+        }
+        Spacer(modifier = Modifier.padding(20.dp))
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -192,90 +216,104 @@ fun CreateSplitScreenContent(
                 .fillMaxWidth()
                 .padding(16.dp)
         )
-        LazyColumn(content = {
-            groupMembers.forEach {
-                item {
-                    ElevatedCard(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth()
-                            .border(
-                                width = 0.dp,
-                                color = MaterialTheme.colorScheme.background, // Adjust border color as needed
-                                shape = RoundedCornerShape(0.dp) // Adjust corner radius here
-                            ),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.background,
-                        ),
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 8.dp
-                        )
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+        Box(modifier = Modifier.weight(1f)) {
+            LazyColumn(content = {
+                groupMembers.forEach {
+                    item {
+                        ElevatedCard(
                             modifier = Modifier
-                                .wrapContentHeight()
-                                .height(68.dp)
+                                .padding(10.dp)
+                                .fillMaxWidth()
+                                .border(
+                                    width = 0.dp,
+                                    color = MaterialTheme.colorScheme.background, // Adjust border color as needed
+                                    shape = RoundedCornerShape(0.dp) // Adjust corner radius here
+                                ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.background,
+                            ),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 8.dp
+                            )
                         ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.baseline_account_circle_24),
-                                contentDescription = "Account",
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
-                                    .width(38.dp)
-                                    .height(38.dp)
-                                    .padding(6.dp)
-                            )
-                            Column(modifier = Modifier.fillMaxWidth(.8f)) {
-                                Spacer(modifier = Modifier.padding(4.dp))
-                                Text(
-                                    text = it.fullName,
-                                    style = MaterialTheme.typography.titleMedium
+                                    .wrapContentHeight()
+                                    .height(68.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.baseline_account_circle_24),
+                                    contentDescription = "Account",
+                                    modifier = Modifier
+                                        .width(38.dp)
+                                        .height(38.dp)
+                                        .padding(6.dp)
                                 )
-                                Text(text = it.email, style = MaterialTheme.typography.bodyMedium)
-                                Spacer(modifier = Modifier.padding(4.dp))
+                                Column(modifier = Modifier.fillMaxWidth(.8f)) {
+                                    Spacer(modifier = Modifier.padding(4.dp))
+                                    Text(
+                                        text = it.fullName,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    Text(
+                                        text = it.email,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Spacer(modifier = Modifier.padding(4.dp))
+                                }
+                                OutlinedTextField(
+                                    value = splitValues.value[it.uid].toString(),
+                                    onValueChange = { newValue ->
+                                        if (newValue.isNotBlank()) {
+                                            splitValues.value =
+                                                splitValues.value.toMutableMap().apply {
+                                                    this[it.uid] = newValue.toInt()
+                                                }
+                                        } else {
+                                            splitValues.value =
+                                                splitValues.value.toMutableMap().apply {
+                                                    this[it.uid] = 0
+                                                }
+                                        }
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    modifier = Modifier
+                                        .wrapContentWidth()
+                                        .align(Alignment.CenterVertically),
+                                    placeholder = { Text("0") },
+                                    singleLine = true
+                                )
                             }
-                            OutlinedTextField(
-                                value = splitValues.value[it.uid].toString(),
-                                onValueChange = { newValue ->
-                                    if (newValue.isNotBlank()) {
-                                        splitValues.value = splitValues.value.toMutableMap().apply {
-                                            this[it.uid] = newValue.toInt()
-                                        }
-                                    } else {
-                                        splitValues.value = splitValues.value.toMutableMap().apply {
-                                            this[it.uid] = 0
-                                        }
-                                    }
-                                    refresher ++
-                                },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier
-                                    .wrapContentWidth()
-                                    .align(Alignment.CenterVertically),
-                                placeholder = { Text("0") },
-                                singleLine = true
-                            )
                         }
                     }
                 }
-            }
-        })
+            })
+        }
         if (isLoading) {
             LinearProgressIndicator()
         }
         ElevatedButton(
             onClick = {
-
-                if (validateInputs(splitValues, amount, context)) return@ElevatedButton
+                if (validateInputs(
+                        splitValues = splitValues,
+                        amount = amount,
+                        context = context,
+                        splitMode = splitMode,
+                        selectedDate = selectedDate
+                    )
+                ) return@ElevatedButton
 
                 createNewSplitInGroup(
-                    message,
-                    amount,
-                    groupMembers,
-                    splitValues,
-                    groupDetail,
-                    navController,
-                    context,
+                    message= message,
+                    amount = amount,
+                    groupMembers = groupMembers,
+                    splitValues = splitValues,
+                    groupDetail = groupDetail,
+                    navController = navController,
+                    context = context,
+                    splitMode = splitMode,
+                    selectedDate = selectedDate,
                     setIsLoading = {
                         isLoading = it
                     }
@@ -293,6 +331,8 @@ fun CreateSplitScreenContent(
 private fun validateInputs(
     splitValues: MutableState<MutableMap<String, Int>>,
     amount: Int,
+    splitMode: String,
+    selectedDate: String,
     context: Context
 ): Boolean {
     var totalAmount = 0
@@ -307,9 +347,132 @@ private fun validateInputs(
         ).show()
         return true
     }
+
+    if (splitMode == SplitModes.Scheduled && selectedDate.isEmpty()) {
+        Toast.makeText(
+            context,
+            "Kindly select a date to schedule",
+            Toast.LENGTH_SHORT
+        ).show()
+        return true
+    }
     return false
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SplitModeDropdownMenuBox(selectedValue: String, onSelected: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.padding(12.dp)
+    ) {
+        OutlinedTextField(
+            value = selectedValue,
+            onValueChange = { onSelected(it) },
+            label = { Text("Split Mode") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(
+                    expanded = expanded
+                )
+            },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            readOnly = true
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Single") },
+                onClick = {
+                    onSelected(SplitModes.Single)
+                    expanded = false
+                },
+                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+            )
+            DropdownMenuItem(
+                text = { Text("Scheduled") },
+                onClick = {
+                    onSelected(SplitModes.Scheduled)
+                    expanded = false
+                },
+                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+            )
+            DropdownMenuItem(
+                text = { Text("Recurring") },
+                onClick = {
+                    onSelected(SplitModes.Recurring)
+                    expanded = false
+                },
+                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ExposedDropdownMenuBoxPreview() {
+    SplitModeDropdownMenuBox(selectedValue = SplitModes.Single) {
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DateSelectionInput(selectedDate: String, onDateSelected: (String) -> Unit) {
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+
+    val dateFormatter = remember {
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    }
+
+    val dateSetListener =
+        DatePickerDialog.OnDateSetListener { _: DatePicker, year: Int, month: Int, day: Int ->
+            calendar.set(Calendar.YEAR, year)
+            calendar.set(Calendar.MONTH, month)
+            calendar.set(Calendar.DAY_OF_MONTH, day)
+            onDateSelected(dateFormatter.format(calendar.time))
+        }
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        dateSetListener,
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        OutlinedTextField(
+            value = selectedDate,
+            onValueChange = { onDateSelected(it) },
+            readOnly = true, // Make the TextField read-only
+            label = { Text("Select Trigger Date") },
+            trailingIcon = {
+                IconButton(onClick = { datePickerDialog.show() }) {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_today),
+                        contentDescription = "Select Date"
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DateSelectionInputPreview() {
+    DateSelectionInput("1999-08-20") {
+
+    }
+}
 
 private fun createNewSplitInGroup(
     message: String,
@@ -319,9 +482,51 @@ private fun createNewSplitInGroup(
     groupDetail: SplitGroup,
     navController: NavHostController,
     context: Context,
-    setIsLoading: (Boolean) -> Unit
+    setIsLoading: (Boolean) -> Unit,
+    splitMode: String,
+    selectedDate: String
 ) {
     setIsLoading(true)
+    if(splitMode == SplitModes.Single) {
+        createSingleSplit(
+            message,
+            amount,
+            groupMembers,
+            splitValues,
+            groupDetail,
+            navController,
+            setIsLoading,
+            context
+        )
+    }else if(splitMode == SplitModes.Scheduled){
+        createScheduledSplit(
+            message,
+            amount,
+            groupMembers,
+            splitValues,
+            groupDetail,
+            navController,
+            setIsLoading,
+            context,
+            splitMode,
+            selectedDate
+        )
+    }
+}
+
+fun createScheduledSplit(
+    message: String,
+    amount: Int,
+    groupMembers: List<UserAccount>,
+    splitValues: MutableState<MutableMap<String, Int>>,
+    groupDetail: SplitGroup,
+    navController: NavHostController,
+    setIsLoading: (Boolean) -> Unit,
+    context: Context,
+    splitMode: String,
+    selectedDate: String
+) {
+
     Firebase.database.reference.child(DatabaseKeys.userAccounts).child(Firebase.auth.uid.toString())
         .get()
         .addOnSuccessListener { it ->
@@ -340,7 +545,70 @@ private fun createNewSplitInGroup(
                     splitDetail.userAccount = user
 
                     //If the user is the split owner, mark as paid
-                    if(user.uid == Firebase.auth.uid){
+                    if (user.uid == Firebase.auth.uid) {
+                        splitDetail.isPaid = true
+                    }
+
+                    splitDetails.add(splitDetail)
+                }
+
+            }
+
+            expenseSplit.splitDetails = splitDetails
+
+            val scheduledSplit = ScheduledSplit()
+            scheduledSplit.splitMode = splitMode
+            scheduledSplit.expenseSplit = expenseSplit
+            scheduledSplit.createdAt = System.currentTimeMillis()
+            scheduledSplit.triggerTime = convertDateStringToMillis(selectedDate)
+            val scheduleRef  =
+                Firebase.database.reference.child(DatabaseKeys.schedules).child(groupDetail.groupId)
+                    .push()
+            scheduledSplit.scheduledSplitId = scheduleRef.key.toString()
+
+            scheduleRef.setValue(scheduledSplit).addOnSuccessListener {
+                navController.navigate(Routes.groupMessagesScreen(groupId = groupDetail.groupId))
+                setIsLoading(false)
+            }.addOnFailureListener {
+                Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                setIsLoading(false)
+            }
+
+        }.addOnFailureListener {
+            setIsLoading(false)
+            Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+        }
+}
+
+private fun createSingleSplit(
+    message: String,
+    amount: Int,
+    groupMembers: List<UserAccount>,
+    splitValues: MutableState<MutableMap<String, Int>>,
+    groupDetail: SplitGroup,
+    navController: NavHostController,
+    setIsLoading: (Boolean) -> Unit,
+    context: Context
+) {
+    Firebase.database.reference.child(DatabaseKeys.userAccounts).child(Firebase.auth.uid.toString())
+        .get()
+        .addOnSuccessListener { it ->
+            val expenseSplit = ExpenseSplit()
+            expenseSplit.createdAt = System.currentTimeMillis()
+            expenseSplit.message = message
+            expenseSplit.createdBy = it.getValue(UserAccount::class.java)!!
+            expenseSplit.totalAmount = amount.toDouble()
+            val splitDetails = ArrayList<SplitDetail>()
+
+            groupMembers.forEach { user ->
+                if (splitValues.value.containsKey(user.uid)) {
+                    val splitDetail = SplitDetail()
+                    splitDetail.amount = splitValues.value[user.uid]!!.toDouble()
+                    splitDetail.isPaid = false
+                    splitDetail.userAccount = user
+
+                    //If the user is the split owner, mark as paid
+                    if (user.uid == Firebase.auth.uid) {
                         splitDetail.isPaid = true
                     }
 

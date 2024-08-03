@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -42,9 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.constraintlayout.solver.widgets.Rectangle
 import androidx.core.text.isDigitsOnly
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -54,6 +61,7 @@ import com.google.firebase.database.database
 import com.myapps.splitwiseclone.DatabaseKeys
 import com.myapps.splitwiseclone.R
 import com.myapps.splitwiseclone.models.ExpenseSplit
+import com.myapps.splitwiseclone.models.ScheduledSplit
 import com.myapps.splitwiseclone.models.SplitDetail
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.ui.Routes
@@ -63,6 +71,7 @@ import kotlinx.coroutines.tasks.await
 
 
 private const val TAG = "GroupMessagesScreen"
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +125,7 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
                         onDismissRequest = { menuExpanded = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text(text = "Edit Group")},
+                            text = { Text(text = "Edit Group") },
                             onClick = {
                                 menuExpanded = false
                                 // Handle edit group action here
@@ -124,18 +133,28 @@ fun GroupMessagesScreen(navController: NavHostController, groupId: String?) {
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(text = "Exit Group")},
+                            text = { Text(text = "Exit Group") },
                             onClick = {
                                 menuExpanded = false
                                 splitGroup.groupMembers.remove(Firebase.auth.uid)
-                                Firebase.database.reference.child(DatabaseKeys.splitGroups).child(splitGroup.groupId).setValue(splitGroup).addOnCompleteListener {
-                                    if(it.isSuccessful){
-                                        Toast.makeText(context,"Exited group",Toast.LENGTH_SHORT).show()
-                                        navController.navigate(Routes.homeScreen)
-                                    }else{
-                                        Toast.makeText(context,"Unable to exit group,try again",Toast.LENGTH_SHORT).show()
+                                Firebase.database.reference.child(DatabaseKeys.splitGroups)
+                                    .child(splitGroup.groupId).setValue(splitGroup)
+                                    .addOnCompleteListener {
+                                        if (it.isSuccessful) {
+                                            Toast.makeText(
+                                                context,
+                                                "Exited group",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            navController.navigate(Routes.homeScreen)
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "Unable to exit group,try again",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
-                                }
                             }
                         )
                     }
@@ -166,8 +185,8 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupId: String
                 .padding(16.dp)
                 .imePadding() // Adjust padding based on the keyboard's presence
         ) {
+            SchedulesNotificationArea(groupId)
             MessagesArea(groupId = groupId, modifier = Modifier.weight(1f))
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -198,6 +217,40 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupId: String
                     Text(text = if (inputValue.isDigitsOnly() && inputValue.isNotBlank()) "Split" else "Split")
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SchedulesNotificationArea(groupId: String) {
+    var schedules by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        try {
+            val snapshot =
+                Firebase.database.reference.child(DatabaseKeys.schedules).child(groupId).get()
+                    .await()
+            val schedulesList =
+                snapshot.children.mapNotNull { it.getValue(ScheduledSplit::class.java) }
+            schedules = schedulesList.size
+        } catch (e: Exception) {
+
+        }
+    }
+
+    if (schedules > 0) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xffa8e4ff))
+                .padding(8.dp)
+                .border(3.dp, Color(0xffa8e4ff), RoundedCornerShape(8.dp)),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Text(
+                text = "You have $schedules active schedule",
+                textAlign = TextAlign.Center
+            )
+            ClickableText(text = AnnotatedString("View"), onClick = {}, style = TextStyle(color = Color.Blue))
         }
     }
 }
@@ -340,7 +393,7 @@ private fun SplitDetailMessage(
 private fun PayButton(
     split: ExpenseSplit,
     groupId: String,
-    payAmount : Double
+    payAmount: Double
 ) {
     val context = LocalContext.current
     Button(onClick = {

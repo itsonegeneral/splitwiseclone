@@ -87,7 +87,6 @@ fun EditGroupScreen(navController: NavController, groupId: String?) {
             ) {
                 EditGroupScreenContent(navController = navController, groupId = groupId!!)
             }
-
         }
     )
 }
@@ -165,75 +164,76 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
             Text(text = "No members in this group", textAlign = TextAlign.Center)
         }
 
-        LazyColumn(content = {
-            splitGroupMembers.forEach {
-                item {
-                    ElevatedCard(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth()
-                            .border(
-                                width = 0.dp,
-                                color = MaterialTheme.colorScheme.background, // Adjust border color as needed
-                                shape = RoundedCornerShape(0.dp) // Adjust corner radius here
-                            ),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.background,
-                        ),
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 8.dp
-                        )
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+        Box(modifier = Modifier.weight(1f)){
+            LazyColumn(content = {
+                splitGroupMembers.forEach {
+                    item {
+                        ElevatedCard(
                             modifier = Modifier
-                                .wrapContentHeight()
-                                .height(68.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.baseline_account_circle_24),
-                                contentDescription = "Account",
-                                modifier = Modifier
-                                    .width(38.dp)
-                                    .height(38.dp)
-                                    .padding(6.dp)
+                                .padding(10.dp)
+                                .fillMaxWidth()
+                                .border(
+                                    width = 0.dp,
+                                    color = MaterialTheme.colorScheme.background, // Adjust border color as needed
+                                    shape = RoundedCornerShape(0.dp) // Adjust corner radius here
+                                ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.background,
+                            ),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 8.dp
                             )
-                            Column(modifier = Modifier.fillMaxWidth(.8f)) {
-                                Spacer(modifier = Modifier.padding(4.dp))
-                                Text(
-                                    text = it.fullName,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(text = it.email, style = MaterialTheme.typography.bodyMedium)
-                                Spacer(modifier = Modifier.padding(4.dp))
-
-                            }
-                            IconButton(onClick = {
-                                if (it.uid == Firebase.auth.uid) {
-                                    //Cannot remove self, only can exit
-                                    Toast.makeText(
-                                        context,
-                                        "You cannot remove yourself, you can exit either",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                } else {
-                                    splitGroupMembers =
-                                        splitGroupMembers.filter { member -> it.uid != member.uid }
-                                }
-                            }) {
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .wrapContentHeight()
+                                    .height(68.dp)
+                            ) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.baseline_remove_24),
-                                    contentDescription = "Remove",
+                                    painter = painterResource(id = R.drawable.baseline_account_circle_24),
+                                    contentDescription = "Account",
+                                    modifier = Modifier
+                                        .width(38.dp)
+                                        .height(38.dp)
+                                        .padding(6.dp)
                                 )
+                                Column(modifier = Modifier.fillMaxWidth(.8f)) {
+                                    Spacer(modifier = Modifier.padding(4.dp))
+                                    Text(
+                                        text = it.fullName,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    Text(text = it.email, style = MaterialTheme.typography.bodyMedium)
+                                    Spacer(modifier = Modifier.padding(4.dp))
+
+                                }
+                                IconButton(onClick = {
+                                    if (it.uid == Firebase.auth.uid) {
+                                        //Cannot remove self, only can exit
+                                        Toast.makeText(
+                                            context,
+                                            "You cannot remove yourself, you can exit either",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        splitGroupMembers =
+                                            splitGroupMembers.filter { member -> it.uid != member.uid }
+                                    }
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.baseline_remove_24),
+                                        contentDescription = "Remove",
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
-        })
+            })
+        }
         Button(onClick = {
             splitGroup.groupName = updatedGroupName
-
             val updatedGroupMembers = ArrayList<String>()
             splitGroupMembers.forEach { updatedGroupMembers.add(it.uid) }
             if(!updatedGroupMembers.contains(Firebase.auth.uid)){

@@ -171,7 +171,7 @@ fun HomeScreenContent(navController: NavController) {
     Column(modifier = Modifier.padding(top = 80.dp, start = 16.dp, end = 16.dp)) {
         Text(
             text = "Welcome $fullName",
-            fontSize = 27.sp,
+            fontSize = 24.sp,
             modifier = Modifier.padding(bottom = 10.dp)
         )
         OutlinedTextField(
