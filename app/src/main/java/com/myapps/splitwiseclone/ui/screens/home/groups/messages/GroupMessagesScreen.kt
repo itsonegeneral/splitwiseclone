@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -204,28 +205,27 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupId: String
 
 @Composable
 fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
-
-    var isLoading by remember {
-        mutableStateOf(false)
-    }
-
-    var splits by remember {
-        mutableStateOf(listOf<ExpenseSplit>())
-    }
-
+    var isLoading by remember { mutableStateOf(false) }
+    var splits by remember { mutableStateOf(listOf<ExpenseSplit>()) }
     val context = LocalContext.current
+    val listState = rememberLazyListState()
+
     LaunchedEffect(Unit) {
         isLoading = true
         try {
-            val snapshot =
-                Firebase.database.reference.child("splits").child(groupId).get().await()
+            val snapshot = Firebase.database.reference.child("splits").child(groupId).get().await()
             splits = snapshot.children.mapNotNull { it.getValue(ExpenseSplit::class.java) }
-
         } catch (e: Exception) {
             Toast.makeText(context, "Unable to fetch group details", Toast.LENGTH_SHORT).show()
         }
         isLoading = false
+    }
 
+    // Scroll to the bottom whenever splits change
+    LaunchedEffect(splits) {
+        if (splits.isNotEmpty()) {
+            listState.animateScrollToItem(splits.size - 1)
+        }
     }
 
     if (isLoading) {
@@ -240,7 +240,10 @@ fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
         if (splits.isEmpty() && !isLoading) {
             Text(text = "You don't have any messages")
         } else {
-            LazyColumn {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize()
+            ) {
                 items(splits) { split ->
                     MessageItem(split = split, groupId = groupId)
                 }

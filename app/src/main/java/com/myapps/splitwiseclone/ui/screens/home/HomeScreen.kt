@@ -215,7 +215,6 @@ fun HomeScreenContent(navController: NavController) {
                            }else{
                                Toast.makeText(context, "This group was created with previous version, kindly create new group.", Toast.LENGTH_SHORT).show()
                            }
-
                        }
                    ) {
                        Text(
