@@ -52,6 +52,7 @@ import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
 import com.myapps.splitwiseclone.ui.components.CustomLoading
+import com.myapps.splitwiseclone.ui.components.KeyboardAware
 import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,10 +98,6 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
         mutableStateOf("")
     }
 
-    var updatedGroupMembers by remember {
-        mutableStateOf(arrayListOf<String>())
-    }
-
     var splitGroup by remember {
         mutableStateOf(SplitGroup())
     }
@@ -116,12 +113,9 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
             val snapshot = Firebase.database.reference.child("groups").child(groupId).get().await()
             splitGroup = snapshot.getValue(SplitGroup::class.java)!!
             updatedGroupName = splitGroup.groupName
-            updatedGroupMembers = splitGroup.groupMembers
             fetchObjectsByIds(splitGroup.groupMembers) {
                 splitGroupMembers = ArrayList()
-                it.forEach { entry ->
-                    splitGroupMembers = splitGroupMembers + entry.value
-                }
+                splitGroupMembers = ArrayList(it.values.toList())
             }
         } catch (e: Exception) {
             Toast.makeText(context, "Unable to fetch group details", Toast.LENGTH_SHORT).show()
@@ -142,9 +136,10 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
             onValueChange =
             { updatedGroupName = it })
         Spacer(modifier = Modifier.padding(12.dp))
-        Row (verticalAlignment = Alignment.CenterVertically){
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "Members", fontSize = 20.sp, modifier = Modifier.fillMaxWidth(.8f))
             IconButton(onClick = {
+
             }, modifier = Modifier.fillMaxWidth(1f)) {
                 Icon(
                     painter = painterResource(id = R.drawable.baseline_add_24),
@@ -201,11 +196,16 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
 
                             }
                             IconButton(onClick = {
-                                if(it.uid == Firebase.auth.uid){
+                                if (it.uid == Firebase.auth.uid) {
                                     //Cannot remove self, only can exit
-                                    Toast.makeText(context,"You cannot remove yourself, you can exit either",Toast.LENGTH_SHORT).show()
-                                }else {
-                                    updatedGroupMembers.remove(it.uid)
+                                    Toast.makeText(
+                                        context,
+                                        "You cannot remove yourself, you can exit either",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    splitGroupMembers =
+                                        splitGroupMembers.filter { member -> it.uid != member.uid }
                                 }
                             }) {
                                 Icon(
@@ -220,7 +220,12 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
         })
         Button(onClick = {
             splitGroup.groupName = updatedGroupName
-            splitGroup.groupMembers = updatedGroupMembers as ArrayList<String>
+
+            val updatedGroupMembers = ArrayList<String>()
+            splitGroupMembers.forEach { updatedGroupMembers.add(it.uid) }
+            splitGroup.groupMembers = updatedGroupMembers
+
+
             isLoading = true
             updateSplitGroup(splitGroup = splitGroup) { isSuccess ->
                 isLoading = false
