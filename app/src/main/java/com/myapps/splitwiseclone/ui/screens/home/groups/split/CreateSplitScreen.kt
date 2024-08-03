@@ -164,6 +164,8 @@ fun CreateSplitScreenContent(
     }
 
     Column {
+        //Reccuring Splits Dev
+        
         Spacer(modifier = Modifier.padding(30.dp))
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -341,7 +343,7 @@ private fun createNewSplitInGroup(
                     if(user.uid == Firebase.auth.uid){
                         splitDetail.isPaid = true
                     }
-                    
+
                     splitDetails.add(splitDetail)
                 }
 

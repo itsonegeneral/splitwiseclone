@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +54,7 @@ import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
 import com.myapps.splitwiseclone.ui.components.CustomLoading
 import com.myapps.splitwiseclone.ui.components.KeyboardAware
+import com.myapps.splitwiseclone.ui.screens.home.common.states.SelectionState
 import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,8 +96,11 @@ fun EditGroupScreen(navController: NavController, groupId: String?) {
 @Composable
 fun EditGroupScreenContent(navController: NavController, groupId: String) {
 
-    var updatedGroupName by remember {
-        mutableStateOf("")
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+    var updatedGroupName by rememberSaveable {
+        mutableStateOf(
+            savedStateHandle?.get<String>("groupName") ?: ""
+        )
     }
 
     var splitGroup by remember {
@@ -113,6 +118,10 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
             val snapshot = Firebase.database.reference.child("groups").child(groupId).get().await()
             splitGroup = snapshot.getValue(SplitGroup::class.java)!!
             updatedGroupName = splitGroup.groupName
+            if (SelectionState.selectedUsers.isNotEmpty()) {
+                //Came back from selection users screen
+                splitGroup.groupMembers = SelectionState.selectedUsers
+            }
             fetchObjectsByIds(splitGroup.groupMembers) {
                 splitGroupMembers = ArrayList()
                 splitGroupMembers = ArrayList(it.values.toList())
@@ -134,12 +143,16 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
         OutlinedTextField(modifier = Modifier.fillMaxWidth(),
             value = updatedGroupName,
             onValueChange =
-            { updatedGroupName = it })
+            {
+                updatedGroupName = it
+                savedStateHandle?.set("groupName", updatedGroupName)
+            })
         Spacer(modifier = Modifier.padding(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "Members", fontSize = 20.sp, modifier = Modifier.fillMaxWidth(.8f))
             IconButton(onClick = {
-
+                SelectionState.selectedUsers.clear()
+                navController.navigate(Routes.selectGroupSelectMembersScreen)
             }, modifier = Modifier.fillMaxWidth(1f)) {
                 Icon(
                     painter = painterResource(id = R.drawable.baseline_add_24),
@@ -223,8 +236,10 @@ fun EditGroupScreenContent(navController: NavController, groupId: String) {
 
             val updatedGroupMembers = ArrayList<String>()
             splitGroupMembers.forEach { updatedGroupMembers.add(it.uid) }
+            if(!updatedGroupMembers.contains(Firebase.auth.uid)){
+                updatedGroupMembers.add(Firebase.auth.uid.toString())
+            }
             splitGroup.groupMembers = updatedGroupMembers
-
 
             isLoading = true
             updateSplitGroup(splitGroup = splitGroup) { isSuccess ->

@@ -180,7 +180,7 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupId: String
                     modifier = Modifier
                         .weight(1f) // Use weight to fill available space
                         .padding(end = 8.dp),
-                    placeholder = { Text(text = "Type a message or amount") }
+                    placeholder = { Text(text = "Type amount") }
                 )
 
                 Button(
@@ -189,13 +189,13 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupId: String
                             Routes.createSplitScreen(groupId, inputValue.toInt())
                         ) else Toast.makeText(
                             context,
-                            "Sending messages will be available soon",
+                            "Invalid split amount",
                             Toast.LENGTH_SHORT
                         ).show()
                     },
                     modifier = Modifier.align(Alignment.CenterVertically)
                 ) {
-                    Text(text = if (inputValue.isDigitsOnly() && inputValue.isNotBlank()) "Split" else "Send")
+                    Text(text = if (inputValue.isDigitsOnly() && inputValue.isNotBlank()) "Split" else "Split")
                 }
             }
         }
