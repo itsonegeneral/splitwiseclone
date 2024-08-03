@@ -80,8 +80,8 @@ fun CreateSplitScreen(navController: NavHostController, groupId: String?, amount
                 Firebase.database.reference.child("groups").child(groupId!!).get().await()
             groupDetail = snapshot.getValue(SplitGroup::class.java)!!
             fetchObjectsByIds(groupDetail.groupMembers) {
-                if(it.isEmpty()){
-                    Toast.makeText(context,"No members",Toast.LENGTH_SHORT).show()
+                if (it.isEmpty()) {
+                    Toast.makeText(context, "No members", Toast.LENGTH_SHORT).show()
                     return@fetchObjectsByIds
                 }
                 groupMembers = it.values.toList()
@@ -134,11 +134,22 @@ fun CreateSplitScreenContent(
 
     val splitValues = remember { mutableStateOf(mutableMapOf<String, Int>()) }
 
+    var refresher by remember {
+        mutableStateOf(0)
+    }
 
-    if(groupMembers.isNotEmpty()){
-        val initialEqualAmount = amount.div((groupMembers.size))
-        groupMembers.forEach { entry ->
-            splitValues.value[entry.uid] = initialEqualAmount
+    LaunchedEffect(groupMembers) {
+        if (groupMembers.isNotEmpty()) {
+            val initialEqualAmount = amount / groupMembers.size
+            val remainder = amount % groupMembers.size
+            val tempSplitValues = mutableMapOf<String, Int>()
+
+            groupMembers.forEach { entry ->
+                tempSplitValues[entry.uid] = initialEqualAmount
+            }
+            tempSplitValues[groupMembers.last().uid] = initialEqualAmount + remainder
+
+            splitValues.value = tempSplitValues
         }
     }
 
@@ -233,6 +244,7 @@ fun CreateSplitScreenContent(
                                             this[it.uid] = 0
                                         }
                                     }
+                                    refresher ++
                                 },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier
@@ -251,6 +263,9 @@ fun CreateSplitScreenContent(
         }
         ElevatedButton(
             onClick = {
+
+                if (validateInputs(splitValues, amount, context)) return@ElevatedButton
+
                 createNewSplitInGroup(
                     message,
                     amount,
@@ -273,6 +288,26 @@ fun CreateSplitScreenContent(
     }
 }
 
+private fun validateInputs(
+    splitValues: MutableState<MutableMap<String, Int>>,
+    amount: Int,
+    context: Context
+): Boolean {
+    var totalAmount = 0
+    splitValues.value.forEach {
+        totalAmount += it.value
+    }
+    if (totalAmount != amount) {
+        Toast.makeText(
+            context,
+            "Amount ${if (totalAmount < amount) "$${amount - totalAmount} is less" else "$${totalAmount - amount} is more"}",
+            Toast.LENGTH_SHORT
+        ).show()
+        return true
+    }
+    return false
+}
+
 
 private fun createNewSplitInGroup(
     message: String,
@@ -285,7 +320,8 @@ private fun createNewSplitInGroup(
     setIsLoading: (Boolean) -> Unit
 ) {
     setIsLoading(true)
-    Firebase.database.reference.child(DatabaseKeys.userAccounts).child(Firebase.auth.uid.toString()).get()
+    Firebase.database.reference.child(DatabaseKeys.userAccounts).child(Firebase.auth.uid.toString())
+        .get()
         .addOnSuccessListener { it ->
             val expenseSplit = ExpenseSplit()
             expenseSplit.createdAt = System.currentTimeMillis()
@@ -300,8 +336,15 @@ private fun createNewSplitInGroup(
                     splitDetail.amount = splitValues.value[user.uid]!!.toDouble()
                     splitDetail.isPaid = false
                     splitDetail.userAccount = user
+
+                    //If the user is the split owner, mark as paid
+                    if(user.uid == Firebase.auth.uid){
+                        splitDetail.isPaid = true
+                    }
+                    
                     splitDetails.add(splitDetail)
                 }
+
             }
 
             expenseSplit.splitDetails = splitDetails
@@ -324,7 +367,6 @@ private fun createNewSplitInGroup(
             Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
         }
 }
-
 
 
 @Composable

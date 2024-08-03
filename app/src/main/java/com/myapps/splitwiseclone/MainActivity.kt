@@ -1,7 +1,6 @@
 package com.myapps.splitwiseclone
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,11 +21,10 @@ import com.myapps.splitwiseclone.ui.components.KeyboardAware
 import com.myapps.splitwiseclone.ui.screens.home.HomeScreen
 import com.myapps.splitwiseclone.ui.screens.auth.LoginScreen
 import com.myapps.splitwiseclone.ui.screens.auth.RegisterScreen
-import com.myapps.splitwiseclone.ui.screens.home.creategroup.CreateGroupScreen
-import com.myapps.splitwiseclone.ui.screens.home.creategroup.EditGroupScreen
-import com.myapps.splitwiseclone.ui.screens.home.creategroup.SelectGroupMembersScreen
-import com.myapps.splitwiseclone.ui.screens.home.creategroup.SelectionState
-import com.myapps.splitwiseclone.ui.screens.home.groups.GroupMessagesScreen
+import com.myapps.splitwiseclone.ui.screens.home.groups.CreateGroupScreen
+import com.myapps.splitwiseclone.ui.screens.home.groups.EditGroupScreen
+import com.myapps.splitwiseclone.ui.screens.home.common.SelectGroupMembersScreen
+import com.myapps.splitwiseclone.ui.screens.home.groups.messages.GroupMessagesScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.split.CreateSplitScreen
 import com.myapps.splitwiseclone.ui.theme.SplitwisecloneTheme
 
