@@ -7,4 +7,7 @@ data class ScheduledSplit(
     var createdAt: Long = 0L,
     var triggerTime : Long = 0L
 ) {
+    override fun toString(): String {
+        return "[scheduledSplitId:$scheduledSplitId,splitMode:$splitMode]"
+    }
 }

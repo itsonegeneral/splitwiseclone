@@ -5,5 +5,6 @@ class DatabaseKeys {
         val splitGroups = "groups"
         val userAccounts = "users"
         val schedules = "schedules"
+        val splits = "splits"
     }
 }

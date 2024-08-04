@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.myapps.splitwiseclone.server.ServerMocker
 import com.myapps.splitwiseclone.ui.Routes
 import com.myapps.splitwiseclone.ui.components.KeyboardAware
 import com.myapps.splitwiseclone.ui.screens.home.HomeScreen
@@ -31,7 +32,6 @@ import com.myapps.splitwiseclone.ui.theme.SplitwisecloneTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
             val navController = rememberNavController()
             SplitwisecloneTheme {
@@ -52,6 +52,7 @@ private const val TAG = "MainActivity"
 @Composable
 fun NavigationComponent(navController: NavHostController) {
     val auth = Firebase.auth
+    ServerMocker.refreshSchedules()
     NavHost(
         navController = navController,
         startDestination = if (auth.currentUser == null) "login" else "home"
