@@ -245,7 +245,8 @@ fun SchedulesNotificationArea(groupId: String, navController: NavController) {
                 .background(Color(0xffa8e4ff))
                 .padding(8.dp)
                 .border(3.dp, Color(0xffa8e4ff), RoundedCornerShape(8.dp)),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "You have $schedules active schedule",

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
@@ -165,10 +166,10 @@ fun ScheduleItem(schedule: ScheduledSplit, groupId: String, onScheduleDeleted: (
     Column(
         modifier = Modifier
             .padding(8.dp)
-            .shadow(2.dp)
+            .shadow(2.dp, shape = RoundedCornerShape(4.dp))
             .fillMaxWidth()
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, start = 12.dp,end = 8.dp)) {
             Text(text = "Type : ${schedule.splitMode}", modifier = Modifier.weight(1f))
             IconButton(onClick = {
                 Firebase.database.reference.child(DatabaseKeys.schedules).child(groupId).child(schedule.scheduledSplitId).removeValue().addOnCompleteListener {
@@ -189,7 +190,7 @@ fun ScheduleItem(schedule: ScheduledSplit, groupId: String, onScheduleDeleted: (
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp, start = 12.dp,end = 8.dp)
         ) {
             Text(
                 text = "Message : ${schedule.expenseSplit.message}",
@@ -200,10 +201,7 @@ fun ScheduleItem(schedule: ScheduledSplit, groupId: String, onScheduleDeleted: (
                 modifier = Modifier.weight(1f)
             )
         }
-        Text(
-            text = "${schedule.expenseSplit.splitDetails.size} members",
-            modifier = Modifier.weight(1f)
-        )
+       Spacer(modifier = Modifier.padding(4.dp))
     }
 
 }
