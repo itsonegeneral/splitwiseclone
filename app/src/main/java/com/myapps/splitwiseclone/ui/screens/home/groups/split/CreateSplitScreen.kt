@@ -68,6 +68,7 @@ import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
 import com.myapps.splitwiseclone.ui.screens.home.groups.split.components.RecurringValuesInput
 import com.myapps.splitwiseclone.ui.screens.home.groups.split.components.createRecurringSplit
+import com.myapps.splitwiseclone.ui.screens.home.groups.split.helper.SplitsHelper
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -204,10 +205,10 @@ fun CreateSplitScreenContent(
                 recurringTimes,
                 recurringIntervalInDays,
                 onRecurringTimesSelected = {
-
+                    recurringTimes = it
                 },
                 onRecurringIntervalSelected = {
-
+                    recurringIntervalInDays = it
                 })
         }
         Spacer(modifier = Modifier.padding(20.dp))
@@ -508,7 +509,7 @@ private fun createNewSplitInGroup(
     splitMode: String,
     selectedDate: String,
     recurringTimes: Int,
-    recurringIntervalInDays : Int
+    recurringIntervalInDays: Int
 ) {
     setIsLoading(true)
     if (splitMode == SplitModes.Single) {
@@ -574,26 +575,9 @@ fun createScheduledSplit(
             expenseSplit.message = message
             expenseSplit.createdBy = it.getValue(UserAccount::class.java)!!
             expenseSplit.totalAmount = amount.toDouble()
-            val splitDetails = ArrayList<SplitDetail>()
 
-            groupMembers.forEach { user ->
-                if (splitValues.value.containsKey(user.uid)) {
-                    val splitDetail = SplitDetail()
-                    splitDetail.amount = splitValues.value[user.uid]!!.toDouble()
-                    splitDetail.isPaid = false
-                    splitDetail.userAccount = user
-
-                    //If the user is the split owner, mark as paid
-                    if (user.uid == Firebase.auth.uid) {
-                        splitDetail.isPaid = true
-                    }
-
-                    splitDetails.add(splitDetail)
-                }
-
-            }
-
-            expenseSplit.splitDetails = splitDetails
+            expenseSplit.splitDetails =
+                SplitsHelper.calculateSplitDetailsForMembers(groupMembers, splitValues)
 
             val scheduledSplit = ScheduledSplit()
             scheduledSplit.splitMode = splitMode
@@ -637,26 +621,9 @@ private fun createSingleSplit(
             expenseSplit.message = message
             expenseSplit.createdBy = it.getValue(UserAccount::class.java)!!
             expenseSplit.totalAmount = amount.toDouble()
-            val splitDetails = ArrayList<SplitDetail>()
 
-            groupMembers.forEach { user ->
-                if (splitValues.value.containsKey(user.uid)) {
-                    val splitDetail = SplitDetail()
-                    splitDetail.amount = splitValues.value[user.uid]!!.toDouble()
-                    splitDetail.isPaid = false
-                    splitDetail.userAccount = user
-
-                    //If the user is the split owner, mark as paid
-                    if (user.uid == Firebase.auth.uid) {
-                        splitDetail.isPaid = true
-                    }
-
-                    splitDetails.add(splitDetail)
-                }
-
-            }
-
-            expenseSplit.splitDetails = splitDetails
+            expenseSplit.splitDetails =
+                SplitsHelper.calculateSplitDetailsForMembers(groupMembers, splitValues)
 
             val splitRef =
                 Firebase.database.reference.child("splits").child(groupDetail.groupId)

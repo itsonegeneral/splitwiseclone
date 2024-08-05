@@ -23,15 +23,13 @@ import com.google.firebase.auth.auth
 import com.google.firebase.database.database
 import com.myapps.splitwiseclone.DatabaseKeys
 import com.myapps.splitwiseclone.constants.SplitModes
-import com.myapps.splitwiseclone.helpers.DateHelper
 import com.myapps.splitwiseclone.models.ExpenseSplit
 import com.myapps.splitwiseclone.models.ScheduledSplit
-import com.myapps.splitwiseclone.models.SplitDetail
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
-import com.myapps.splitwiseclone.server.ServerMocker
 import com.myapps.splitwiseclone.server.ServerMocker.Companion.addDaysToCurrentTimeInMillis
 import com.myapps.splitwiseclone.ui.Routes
+import com.myapps.splitwiseclone.ui.screens.home.groups.split.helper.SplitsHelper.Companion.calculateSplitDetailsForMembers
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,25 +101,8 @@ fun createRecurringSplit(
             expenseSplit.message = message
             expenseSplit.createdBy = it.getValue(UserAccount::class.java)!!
             expenseSplit.totalAmount = amount.toDouble()
-            val splitDetails = ArrayList<SplitDetail>()
 
-            groupMembers.forEach { user ->
-                if (splitValues.value.containsKey(user.uid)) {
-                    val splitDetail = SplitDetail()
-                    splitDetail.amount = splitValues.value[user.uid]!!.toDouble()
-                    splitDetail.isPaid = false
-                    splitDetail.userAccount = user
-
-                    //If the user is the split owner, mark as paid
-                    if (user.uid == Firebase.auth.uid) {
-                        splitDetail.isPaid = true
-                    }
-                    splitDetails.add(splitDetail)
-                }
-
-            }
-
-            expenseSplit.splitDetails = splitDetails
+            expenseSplit.splitDetails = calculateSplitDetailsForMembers(groupMembers,splitValues)
 
             val scheduledSplit = ScheduledSplit()
             scheduledSplit.splitMode = splitMode

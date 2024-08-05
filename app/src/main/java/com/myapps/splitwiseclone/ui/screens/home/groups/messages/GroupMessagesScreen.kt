@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.solver.widgets.Rectangle
 import androidx.core.text.isDigitsOnly
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.Firebase
@@ -185,7 +186,7 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupId: String
                 .padding(16.dp)
                 .imePadding() // Adjust padding based on the keyboard's presence
         ) {
-            SchedulesNotificationArea(groupId)
+            SchedulesNotificationArea(groupId, navController)
             MessagesArea(groupId = groupId, modifier = Modifier.weight(1f))
             Row(
                 modifier = Modifier
@@ -222,7 +223,7 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupId: String
 }
 
 @Composable
-fun SchedulesNotificationArea(groupId: String) {
+fun SchedulesNotificationArea(groupId: String, navController: NavController) {
     var schedules by remember { mutableStateOf(0) }
     LaunchedEffect(Unit) {
         try {
@@ -250,7 +251,10 @@ fun SchedulesNotificationArea(groupId: String) {
                 text = "You have $schedules active schedule",
                 textAlign = TextAlign.Center
             )
-            ClickableText(text = AnnotatedString("View"), onClick = {}, style = TextStyle(color = Color.Blue))
+            ClickableText(text = AnnotatedString("View"), onClick = {
+                navController.navigate(Routes.groupSchedulesScreen(groupId))
+                Log.d(TAG, "SchedulesNotificationArea: clicked view")
+            }, style = TextStyle(color = Color.Blue), modifier = Modifier.padding(6.dp))
         }
     }
 }

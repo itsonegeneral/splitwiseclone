@@ -27,6 +27,7 @@ import com.myapps.splitwiseclone.ui.screens.home.groups.EditGroupScreen
 import com.myapps.splitwiseclone.ui.screens.home.common.SelectGroupMembersScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.messages.GroupMessagesScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.split.CreateSplitScreen
+import com.myapps.splitwiseclone.ui.screens.home.schedules.ViewSchedulesScreen
 import com.myapps.splitwiseclone.ui.theme.SplitwisecloneTheme
 
 class MainActivity : ComponentActivity() {
@@ -87,6 +88,15 @@ fun NavigationComponent(navController: NavHostController) {
             val groupId = backStackEntry.arguments?.getString("groupId")
             EditGroupScreen(navController, groupId)
         }
+
+        composable(
+            route = Routes.groupSchedulesScreen,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val groupId = backStackEntry.arguments?.getString("groupId")
+            ViewSchedulesScreen(navController, groupId)
+        }
+
 
         composable(
             route = Routes.createSplitScreen,
