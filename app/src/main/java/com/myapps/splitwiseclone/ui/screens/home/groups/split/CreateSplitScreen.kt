@@ -66,6 +66,8 @@ import com.myapps.splitwiseclone.models.SplitDetail
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
+import com.myapps.splitwiseclone.ui.screens.home.groups.split.components.RecurringValuesInput
+import com.myapps.splitwiseclone.ui.screens.home.groups.split.components.createRecurringSplit
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -155,6 +157,13 @@ fun CreateSplitScreenContent(
         mutableStateOf(SplitModes.Single)
     }
 
+    var recurringTimes by remember {
+        mutableStateOf(1)
+    }
+    var recurringIntervalInDays by remember {
+        mutableStateOf(1)
+    }
+
     LaunchedEffect(groupMembers) {
         if (groupMembers.isNotEmpty()) {
             val initialEqualAmount = amount / groupMembers.size
@@ -189,6 +198,17 @@ fun CreateSplitScreenContent(
             DateSelectionInput(selectedDate = selectedDate) {
                 selectedDate = it
             }
+        }
+        if (splitMode == SplitModes.Recurring) {
+            RecurringValuesInput(
+                recurringTimes,
+                recurringIntervalInDays,
+                onRecurringTimesSelected = {
+
+                },
+                onRecurringIntervalSelected = {
+
+                })
         }
         Spacer(modifier = Modifier.padding(20.dp))
         Column(
@@ -305,7 +325,7 @@ fun CreateSplitScreenContent(
                 ) return@ElevatedButton
 
                 createNewSplitInGroup(
-                    message= message,
+                    message = message,
                     amount = amount,
                     groupMembers = groupMembers,
                     splitValues = splitValues,
@@ -316,7 +336,9 @@ fun CreateSplitScreenContent(
                     selectedDate = selectedDate,
                     setIsLoading = {
                         isLoading = it
-                    }
+                    },
+                    recurringIntervalInDays = recurringIntervalInDays,
+                    recurringTimes = recurringTimes
                 )
             },
             modifier = Modifier
@@ -484,10 +506,12 @@ private fun createNewSplitInGroup(
     context: Context,
     setIsLoading: (Boolean) -> Unit,
     splitMode: String,
-    selectedDate: String
+    selectedDate: String,
+    recurringTimes: Int,
+    recurringIntervalInDays : Int
 ) {
     setIsLoading(true)
-    if(splitMode == SplitModes.Single) {
+    if (splitMode == SplitModes.Single) {
         createSingleSplit(
             message,
             amount,
@@ -498,7 +522,7 @@ private fun createNewSplitInGroup(
             setIsLoading,
             context
         )
-    }else if(splitMode == SplitModes.Scheduled){
+    } else if (splitMode == SplitModes.Scheduled) {
         createScheduledSplit(
             message,
             amount,
@@ -510,6 +534,21 @@ private fun createNewSplitInGroup(
             context,
             splitMode,
             selectedDate
+        )
+    } else if (splitMode == SplitModes.Recurring) {
+        createRecurringSplit(
+            message,
+            amount,
+            groupMembers,
+            splitValues,
+            groupDetail,
+            navController,
+            setIsLoading,
+            context,
+            splitMode,
+            selectedDate,
+            recurringTimes,
+            recurringIntervalInDays
         )
     }
 }
@@ -561,7 +600,7 @@ fun createScheduledSplit(
             scheduledSplit.expenseSplit = expenseSplit
             scheduledSplit.createdAt = System.currentTimeMillis()
             scheduledSplit.triggerTime = convertDateStringToMillis(selectedDate)
-            val scheduleRef  =
+            val scheduleRef =
                 Firebase.database.reference.child(DatabaseKeys.schedules).child(groupDetail.groupId)
                     .push()
             scheduledSplit.scheduledSplitId = scheduleRef.key.toString()

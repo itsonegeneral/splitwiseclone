@@ -13,6 +13,7 @@ class ServerMocker {
 
     companion object {
         private const val TAG = "ServerMocker"
+        private const val daysInMillis = 86400000
         fun refreshSchedules() {
             val needToMoveSplits = ArrayList<ExpenseSplit>()
             Log.d(TAG, "refreshSchedules: 1")
@@ -28,7 +29,7 @@ class ServerMocker {
                             Log.d(TAG, "refreshSchedules: current time ${System.currentTimeMillis()} ${schedule.triggerTime > System.currentTimeMillis()}")
                             if (schedule.triggerTime < System.currentTimeMillis()) {
                                 schedule.expenseSplit.scheduleId = schedule.scheduledSplitId
-                                moveSplitToGroup(scheduleList.key!!, schedule.expenseSplit, schedule.scheduledSplitId)
+                                moveSplitToGroup(scheduleList.key!!, schedule.expenseSplit, schedule)
                                 Log.d(TAG, "moveSplitToGroup: Moving ${schedule.scheduledSplitId}")
                             } else {
                                 Log.d(
@@ -42,18 +43,29 @@ class ServerMocker {
 
         }
 
-        private fun moveSplitToGroup(groupId: String, expenseSplit: ExpenseSplit, scheduleId: String) {
+        private fun moveSplitToGroup(groupId: String, expenseSplit: ExpenseSplit, scheduledSplit: ScheduledSplit) {
 
             val splitRef = Firebase.database.reference.child(DatabaseKeys.splits).child(groupId).push()
             expenseSplit.expenseSplitId = splitRef.key!!
             splitRef.setValue(expenseSplit).addOnCompleteListener {
                 if(it.isSuccessful){
                     Log.d(TAG,"Moved split ${expenseSplit.expenseSplitId}")
-                    Firebase.database.reference.child(DatabaseKeys.schedules).child(groupId).child(scheduleId).removeValue()
+                    if(scheduledSplit.timesToExecute == 1){
+                        Firebase.database.reference.child(DatabaseKeys.schedules).child(groupId).child(scheduledSplit.scheduledSplitId).removeValue()
+                    }else{
+                        scheduledSplit.timesToExecute -=1
+                        scheduledSplit.triggerTime = scheduledSplit.triggerTime + (scheduledSplit.triggerInterval * daysInMillis)
+                        Firebase.database.reference.child(DatabaseKeys.schedules).child(groupId).child(scheduledSplit.scheduledSplitId).setValue(scheduledSplit)
+                    }
                 }else{
                     Log.d(TAG,"unable to move split ${expenseSplit.expenseSplitId}")
                 }
             }
         }
+
+        fun addDaysToCurrentTimeInMillis(days : Int): Long{
+            return System.currentTimeMillis() + (days * daysInMillis)
+        }
+
     }
 }
