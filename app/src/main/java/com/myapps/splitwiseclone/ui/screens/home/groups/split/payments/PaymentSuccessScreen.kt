@@ -36,6 +36,7 @@ import com.myapps.splitwiseclone.R
 import com.myapps.splitwiseclone.ui.Routes
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,10 +86,11 @@ fun PaymentSuccessScreenContent(
     paidTo: String,
     message: String
 ) {
-    Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(
             Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.weight(.5f))
             Icon(
                 painter = painterResource(id = R.drawable.baseline_check_24),
                 contentDescription = "Done",
@@ -107,8 +109,10 @@ fun PaymentSuccessScreenContent(
                 }
             )
             Spacer(modifier = Modifier.padding(4.dp))
+            Text(text = "Transaction ID : ${UUID.randomUUID().toString().substring(0,10)}")
+            Spacer(modifier = Modifier.padding(4.dp))
             Text(text = "Date : ${SimpleDateFormat("dd-MMM-yyyy HH:mm").format(Calendar.getInstance().time)}")
-            Spacer(modifier = Modifier.padding(16.dp))
+            Spacer(modifier = Modifier.weight(.5f))
             Button(onClick = {
                 navController.navigate(Routes.homeScreen) {
                     popUpTo(navController.graph.findStartDestination().id) {
