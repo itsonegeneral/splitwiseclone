@@ -5,6 +5,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -187,7 +188,7 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupId: String
                 .imePadding() // Adjust padding based on the keyboard's presence
         ) {
             SchedulesNotificationArea(groupId, navController)
-            MessagesArea(groupId = groupId, modifier = Modifier.weight(1f))
+            MessagesArea(groupId = groupId, modifier = Modifier.weight(1f), navController)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -262,7 +263,7 @@ fun SchedulesNotificationArea(groupId: String, navController: NavController) {
 
 
 @Composable
-fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
+fun MessagesArea(groupId: String, modifier: Modifier = Modifier, navController: NavController) {
     var isLoading by remember { mutableStateOf(false) }
     var splits by remember { mutableStateOf(listOf<ExpenseSplit>()) }
     val context = LocalContext.current
@@ -303,7 +304,9 @@ fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(splits) { split ->
-                    MessageItem(split = split, groupId = groupId)
+                    MessageItem(navController, split = split, groupId = groupId) { splitId ->
+                        navController.navigate(Routes.viewSplitScreen(splitId, groupId))
+                    }
                 }
             }
         }
@@ -311,7 +314,12 @@ fun MessagesArea(groupId: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun MessageItem(split: ExpenseSplit, groupId: String) {
+fun MessageItem(
+    navController: NavController,
+    split: ExpenseSplit,
+    groupId: String,
+    onItemClick: (String) -> Unit
+) {
     val isCurrentUser = split.createdBy.uid == Firebase.auth.uid
     val unpaidMembers = remember(split.splitDetails) {
         split.splitDetails.filter { member -> !member.isPaid }
@@ -320,9 +328,13 @@ fun MessageItem(split: ExpenseSplit, groupId: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
-    ) {
+            .padding(vertical = 4.dp)
+            .clickable {
+                onItemClick(split.expenseSplitId)
+            },
+        horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start,
+
+        ) {
         Column {
             Text(
                 text = if (isCurrentUser) "You" else split.createdBy.fullName, modifier = Modifier
@@ -342,7 +354,7 @@ fun MessageItem(split: ExpenseSplit, groupId: String) {
                     .wrapContentHeight()
             ) {
                 Column {
-                    SplitDetailMessage(split, isCurrentUser, unpaidMembers, groupId)
+                    SplitDetailMessage(navController, split, isCurrentUser, unpaidMembers, groupId)
                 }
 
             }
@@ -352,6 +364,7 @@ fun MessageItem(split: ExpenseSplit, groupId: String) {
 
 @Composable
 private fun SplitDetailMessage(
+    navController: NavController,
     split: ExpenseSplit,
     isCurrentUser: Boolean,
     unpaidMembers: List<SplitDetail>,
@@ -385,7 +398,7 @@ private fun SplitDetailMessage(
         }
         if (it.userAccount.uid == Firebase.auth.uid && !it.isPaid && split.createdBy.uid != Firebase.auth.uid) {
             isMemeberInSplit = true
-            PayButton(split, groupId, it.amount)
+            PayButton(navController, split, groupId, it.amount)
             Log.d(TAG, "SplitDetailMessage: Self user ${it.amount}")
         }
     }
@@ -396,6 +409,7 @@ private fun SplitDetailMessage(
 
 @Composable
 private fun PayButton(
+    navController: NavController,
     split: ExpenseSplit,
     groupId: String,
     payAmount: Double
@@ -413,6 +427,13 @@ private fun PayButton(
             .child(split.expenseSplitId).child("splitDetails").setValue(updatedExpenseSplits)
             .addOnCompleteListener {
                 Toast.makeText(context, "Paid", Toast.LENGTH_SHORT).show()
+                navController.navigate(
+                    Routes.paymentSuccessScreen(
+                        payAmount.toInt(),
+                        split.createdBy.fullName,
+                        split.message
+                    )
+                )
             }.addOnFailureListener {
                 Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
             }

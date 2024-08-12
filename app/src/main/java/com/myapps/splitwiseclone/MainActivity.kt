@@ -27,6 +27,8 @@ import com.myapps.splitwiseclone.ui.screens.home.groups.EditGroupScreen
 import com.myapps.splitwiseclone.ui.screens.home.common.SelectGroupMembersScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.messages.GroupMessagesScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.split.CreateSplitScreen
+import com.myapps.splitwiseclone.ui.screens.home.groups.split.ViewSplitScreen
+import com.myapps.splitwiseclone.ui.screens.home.groups.split.payments.PaymentSuccessScreen
 import com.myapps.splitwiseclone.ui.screens.home.schedules.ViewSchedulesScreen
 import com.myapps.splitwiseclone.ui.theme.SplitwisecloneTheme
 
@@ -106,6 +108,28 @@ fun NavigationComponent(navController: NavHostController) {
             val groupId: String? = backStackEntry.arguments?.getString("groupId")
             val amount: Int? = backStackEntry.arguments?.getInt("amount")
             CreateSplitScreen(navController, groupId, amount)
+        }
+
+        composable(
+            route = Routes.viewSplitScreen,
+            arguments = listOf(navArgument("splitId") { type = NavType.StringType },
+                navArgument("groupId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val groupId: String? = backStackEntry.arguments?.getString("splitId")
+            val amount: String? = backStackEntry.arguments?.getString("groupId")
+            ViewSplitScreen(navController, groupId, amount)
+        }
+
+        composable(
+            route = Routes.paymentSuccessScreen,
+            arguments = listOf(navArgument("amount") { type = NavType.IntType },
+                navArgument("paidTo") { type = NavType.StringType },
+                navArgument("message") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val amount: Int? = backStackEntry.arguments?.getInt("amount")
+            val paidTo: String? = backStackEntry.arguments?.getString("paidTo")
+            val message: String? = backStackEntry.arguments?.getString("message")
+            PaymentSuccessScreen(navController, amount = amount, paidTo = paidTo, message = message)
         }
     }
 }

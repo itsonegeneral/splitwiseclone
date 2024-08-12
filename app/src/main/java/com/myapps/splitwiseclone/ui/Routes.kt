@@ -19,7 +19,15 @@ class Routes {
 
 
         val createSplitScreen = "createSplit/{groupId}/{amount}"
-        fun createSplitScreen(groupId: String, amount : Int) = "createSplit/$groupId/$amount"
+        fun createSplitScreen(groupId: String, amount: Int) = "createSplit/$groupId/$amount"
+
+
+        val viewSplitScreen = "viewSplit/{splitId}/{groupId}"
+        fun viewSplitScreen(splitId: String, groupId: String) = "viewSplit/$splitId/$groupId"
+
+        val paymentSuccessScreen = "paymentSuccessScreen/{amount}/{paidTo}/{message}"
+        fun paymentSuccessScreen(amount: Int, paidTo: String, message: String) =
+            "paymentSuccessScreen/${amount}/${paidTo}/${message}"
 
     }
 }
