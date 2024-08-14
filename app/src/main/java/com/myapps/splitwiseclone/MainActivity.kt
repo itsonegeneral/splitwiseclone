@@ -26,7 +26,7 @@ import com.myapps.splitwiseclone.ui.screens.home.groups.CreateGroupScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.EditGroupScreen
 import com.myapps.splitwiseclone.ui.screens.home.common.SelectGroupMembersScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.messages.GroupMessagesScreen
-import com.myapps.splitwiseclone.ui.screens.home.groups.split.CreateSplitScreen
+import com.myapps.splitwiseclone.ui.screens.home.groups.split.create.CreateSplitScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.split.ViewSplitScreen
 import com.myapps.splitwiseclone.ui.screens.home.groups.split.payments.PaymentSuccessScreen
 import com.myapps.splitwiseclone.ui.screens.home.schedules.ViewSchedulesScreen
