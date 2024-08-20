@@ -91,7 +91,8 @@ fun createRecurringSplit(
     splitMode: String,
     selectedDate: String,
     recurringTimes: Int,
-    recurringInterval: Int
+    recurringInterval: Int,
+    currency: String
 ) {
     Firebase.database.reference.child(DatabaseKeys.userAccounts).child(Firebase.auth.uid.toString())
         .get()
@@ -101,7 +102,7 @@ fun createRecurringSplit(
             expenseSplit.message = message
             expenseSplit.createdBy = it.getValue(UserAccount::class.java)!!
             expenseSplit.totalAmount = amount.toDouble()
-
+            expenseSplit.currency = currency
             expenseSplit.splitDetails = calculateSplitDetailsForMembers(groupMembers,splitValues)
 
             val scheduledSplit = ScheduledSplit()

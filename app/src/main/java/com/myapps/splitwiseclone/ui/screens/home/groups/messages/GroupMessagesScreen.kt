@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.solver.widgets.Rectangle
 import androidx.core.text.isDigitsOnly
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.Firebase
@@ -66,10 +67,13 @@ import com.myapps.splitwiseclone.models.ExpenseSplit
 import com.myapps.splitwiseclone.models.ScheduledSplit
 import com.myapps.splitwiseclone.models.SplitDetail
 import com.myapps.splitwiseclone.models.SplitGroup
+import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes
 import com.myapps.splitwiseclone.ui.components.CustomLoading
 import com.myapps.splitwiseclone.ui.components.KeyboardAware
+import com.myapps.splitwiseclone.ui.screens.home.groups.split.payments.PaymentModeDialog
 import kotlinx.coroutines.tasks.await
+import java.util.Currency
 
 
 private const val TAG = "GroupMessagesScreen"
@@ -208,15 +212,34 @@ fun GroupMessagesScreenContent(navController: NavHostController, groupId: String
                     onClick = {
                         if (inputValue.isDigitsOnly() && inputValue.isNotBlank()) navController.navigate(
                             Routes.createSplitScreen(groupId, inputValue.toInt())
-                        ) else Toast.makeText(
-                            context,
-                            "Invalid split amount",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        ) else {
+                            //message
+                            Firebase.database.reference.child(DatabaseKeys.userAccounts)
+                                .child(Firebase.auth.uid.toString())
+                                .get()
+                                .addOnSuccessListener { it ->
+                                    val expenseSplit = ExpenseSplit()
+                                    expenseSplit.createdAt = System.currentTimeMillis()
+                                    expenseSplit.totalAmount = (-1).toDouble()
+                                    expenseSplit.message = inputValue
+                                    expenseSplit.createdBy = it.getValue(UserAccount::class.java)!!
+                                    val ref = Firebase.database.reference.child(DatabaseKeys.splits)
+                                        .child(groupId).push()
+                                    expenseSplit.expenseSplitId = ref.key.toString()
+                                    ref.setValue(expenseSplit).addOnCompleteListener {
+                                        navController.navigate(Routes.groupMessagesScreen(groupId)) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                inclusive = true
+                                            }
+                                        }
+                                    }
+                                }
+
+                        }
                     },
                     modifier = Modifier.align(Alignment.CenterVertically)
                 ) {
-                    Text(text = if (inputValue.isDigitsOnly() && inputValue.isNotBlank()) "Split" else "Split")
+                    Text(text = if (inputValue.isDigitsOnly() && inputValue.isNotBlank()) "Split" else "Send")
                 }
             }
         }
@@ -330,7 +353,9 @@ fun MessageItem(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clickable {
-                onItemClick(split.expenseSplitId)
+                if(split.totalAmount>0){
+                    onItemClick(split.expenseSplitId)
+                }
             },
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start,
 
@@ -356,7 +381,6 @@ fun MessageItem(
                 Column {
                     SplitDetailMessage(navController, split, isCurrentUser, unpaidMembers, groupId)
                 }
-
             }
         }
     }
@@ -370,6 +394,15 @@ private fun SplitDetailMessage(
     unpaidMembers: List<SplitDetail>,
     groupId: String
 ) {
+
+    if (split.totalAmount < 0) {
+        Text(
+            text = split.message,
+            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
+        )
+        return
+    }
+
     if (split.message.isNotBlank()) {
         Text(
             text = "For '${split.message}'",
@@ -379,7 +412,7 @@ private fun SplitDetailMessage(
         Spacer(modifier = Modifier.padding(4.dp))
     }
     Text(
-        text = "$${split.totalAmount}", fontSize = 28.sp,
+        text = "${split.currency}${split.totalAmount}", fontSize = 28.sp,
         color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else Color.White
     )
     Spacer(modifier = Modifier.padding(4.dp))
@@ -398,7 +431,7 @@ private fun SplitDetailMessage(
         }
         if (it.userAccount.uid == Firebase.auth.uid && !it.isPaid && split.createdBy.uid != Firebase.auth.uid) {
             isMemeberInSplit = true
-            PayButton(navController, split, groupId, it.amount)
+            PayButton(navController, split, groupId, it.amount,split.currency)
             Log.d(TAG, "SplitDetailMessage: Self user ${it.amount}")
         }
     }
@@ -412,33 +445,51 @@ private fun PayButton(
     navController: NavController,
     split: ExpenseSplit,
     groupId: String,
-    payAmount: Double
+    payAmount: Double,
+    currency: String
 ) {
     val context = LocalContext.current
-    Button(onClick = {
-        val updatedExpenseSplits = split.splitDetails.map { splitDetail ->
-            if (splitDetail.userAccount.uid == Firebase.auth.uid) {
-                splitDetail.copy(isPaid = true)
-            } else {
-                splitDetail
+
+    var isDialogOpen by remember {
+        mutableStateOf(false)
+    }
+
+
+    if (isDialogOpen) {
+        PaymentModeDialog(onDismissRequest = {
+            isDialogOpen = false
+        }, onOptionSelected = {
+            if (it == "online") {
+                Toast.makeText(context, "Feature coming soon", Toast.LENGTH_SHORT).show()
+                return@PaymentModeDialog
             }
-        }
-        Firebase.database.reference.child("splits").child(groupId)
-            .child(split.expenseSplitId).child("splitDetails").setValue(updatedExpenseSplits)
-            .addOnCompleteListener {
-                Toast.makeText(context, "Paid", Toast.LENGTH_SHORT).show()
-                navController.navigate(
-                    Routes.paymentSuccessScreen(
-                        payAmount.toInt(),
-                        split.createdBy.fullName,
-                        split.message
+            val updatedExpenseSplits = split.splitDetails.map { splitDetail ->
+                if (splitDetail.userAccount.uid == Firebase.auth.uid) {
+                    splitDetail.copy(isPaid = true)
+                } else {
+                    splitDetail
+                }
+            }
+            Firebase.database.reference.child("splits").child(groupId)
+                .child(split.expenseSplitId).child("splitDetails").setValue(updatedExpenseSplits)
+                .addOnCompleteListener {
+                    Toast.makeText(context, "Paid", Toast.LENGTH_SHORT).show()
+                    navController.navigate(
+                        Routes.paymentSuccessScreen(
+                            payAmount.toInt(),
+                            split.createdBy.fullName,
+                            split.message
+                        )
                     )
-                )
-            }.addOnFailureListener {
-                Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-            }
+                }.addOnFailureListener {
+                    Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                }
+        })
+    }
+    Button(onClick = {
+        isDialogOpen = true
     }) {
-        Text(text = "Pay $$payAmount")
+        Text(text = "Pay $currency$payAmount")
     }
 }
 

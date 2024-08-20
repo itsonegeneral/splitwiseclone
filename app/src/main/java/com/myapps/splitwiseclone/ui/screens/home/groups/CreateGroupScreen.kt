@@ -43,6 +43,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.database.database
 import com.myapps.splitwiseclone.R
 import com.myapps.splitwiseclone.helpers.fetchObjectsByIds
+import com.myapps.splitwiseclone.helpers.getContactNumbers
 import com.myapps.splitwiseclone.models.SplitGroup
 import com.myapps.splitwiseclone.models.UserAccount
 import com.myapps.splitwiseclone.ui.Routes

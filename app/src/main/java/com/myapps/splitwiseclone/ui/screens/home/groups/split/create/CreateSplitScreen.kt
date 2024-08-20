@@ -4,7 +4,6 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.widget.DatePicker
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -173,6 +171,10 @@ fun CreateSplitScreenContent(
         mutableStateOf(1)
     }
 
+    var currency by remember {
+        mutableStateOf("$")
+    }
+
     LaunchedEffect(groupMembers) {
         if (groupMembers.isNotEmpty()) {
             val initialEqualAmount = amount / groupMembers.size
@@ -221,6 +223,9 @@ fun CreateSplitScreenContent(
                 onRecurringIntervalSelected = {
                     recurringIntervalInDays = it
                 })
+        }
+        SplitCurrencyDropdownMenuBox(selectedValue = currency){
+            currency = it
         }
         Spacer(modifier = Modifier.padding(20.dp))
         Column(
@@ -388,6 +393,7 @@ fun CreateSplitScreenContent(
                     },
                     recurringIntervalInDays = recurringIntervalInDays,
                     recurringTimes = recurringTimes,
+                    currency = currency
                 )
             },
             modifier = Modifier
@@ -497,6 +503,53 @@ fun SplitModeDropdownMenuBox(selectedValue: String, onSelected: (String) -> Unit
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SplitCurrencyDropdownMenuBox(selectedValue: String, onSelected: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.padding(12.dp)
+    ) {
+        OutlinedTextField(
+            value = selectedValue,
+            onValueChange = { onSelected(it) },
+            label = { Text("Select Currency") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(
+                    expanded = expanded
+                )
+            },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            readOnly = true
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("USD ($)") },
+                onClick = {
+                    onSelected("$")
+                    expanded = false
+                },
+                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+            )
+            DropdownMenuItem(
+                text = { Text("INR (₹)") },
+                onClick = {
+                    onSelected("₹")
+                    expanded = false
+                },
+                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun ExposedDropdownMenuBoxPreview() {
@@ -569,7 +622,8 @@ private fun createNewSplitInGroup(
     splitMode: String,
     selectedDate: String,
     recurringTimes: Int,
-    recurringIntervalInDays: Int
+    recurringIntervalInDays: Int,
+    currency : String
 ) {
     setIsLoading(true)
     when (splitMode) {
@@ -582,7 +636,8 @@ private fun createNewSplitInGroup(
                 groupDetail,
                 navController,
                 setIsLoading,
-                context
+                context,
+                currency
             )
         }
 
@@ -597,7 +652,8 @@ private fun createNewSplitInGroup(
                 setIsLoading,
                 context,
                 splitMode,
-                selectedDate
+                selectedDate,
+                currency
             )
         }
 
@@ -614,7 +670,8 @@ private fun createNewSplitInGroup(
                 splitMode,
                 selectedDate,
                 recurringTimes,
-                recurringIntervalInDays
+                recurringIntervalInDays,
+                currency
             )
         }
     }
@@ -630,7 +687,8 @@ fun createScheduledSplit(
     setIsLoading: (Boolean) -> Unit,
     context: Context,
     splitMode: String,
-    selectedDate: String
+    selectedDate: String,
+    currency: String
 ) {
 
     Firebase.database.reference.child(DatabaseKeys.userAccounts).child(Firebase.auth.uid.toString())
@@ -641,7 +699,7 @@ fun createScheduledSplit(
             expenseSplit.message = message
             expenseSplit.createdBy = it.getValue(UserAccount::class.java)!!
             expenseSplit.totalAmount = amount.toDouble()
-
+            expenseSplit.currency = currency
             expenseSplit.splitDetails =
                 SplitsHelper.calculateSplitDetailsForMembers(groupMembers, splitValues)
 
@@ -677,7 +735,8 @@ private fun createSingleSplit(
     groupDetail: SplitGroup,
     navController: NavHostController,
     setIsLoading: (Boolean) -> Unit,
-    context: Context
+    context: Context,
+    currency: String
 ) {
     Firebase.database.reference.child(DatabaseKeys.userAccounts).child(Firebase.auth.uid.toString())
         .get()
@@ -687,7 +746,7 @@ private fun createSingleSplit(
             expenseSplit.message = message
             expenseSplit.createdBy = it.getValue(UserAccount::class.java)!!
             expenseSplit.totalAmount = amount.toDouble()
-
+            expenseSplit.currency = currency
             expenseSplit.splitDetails =
                 SplitsHelper.calculateSplitDetailsForMembers(groupMembers, splitValues)
 

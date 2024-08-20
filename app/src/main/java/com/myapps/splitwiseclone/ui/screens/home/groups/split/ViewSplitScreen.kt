@@ -19,6 +19,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -32,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -111,34 +113,55 @@ fun ViewSplitScreenContent(
             Spacer(modifier = Modifier.padding(6.dp))
             Text(text = "${expenseSplit.totalAmount}", fontSize = 34.sp)
             Spacer(modifier = Modifier.padding(6.dp))
-            LazyColumn(modifier = Modifier.fillMaxSize(),content = {
+            LazyColumn(modifier = Modifier.fillMaxSize(), content = {
                 items(expenseSplit.splitDetails) {
-                    Card (modifier = Modifier.fillMaxWidth().padding(8.dp)){
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth().padding(8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp, start = 12.dp, end = 12.dp)
                         ) {
-                            Text(text = it.userAccount.fullName)
-                            Text(text = if (it.isPaid) "Paid" else "Unpaid")
+                            Text(
+                                text = "${it.userAccount.fullName} ${if (expenseSplit.createdBy.uid == it.userAccount.uid) "(Owner)" else ""}",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (expenseSplit.createdBy.uid == it.userAccount.uid)
+                                Text(text = if (it.isPaid) "Paid" else "Unpaid")
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth().padding(8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp, start = 12.dp, end = 12.dp)
                         ) {
                             Text(text = "Amount : ${it.amount}")
                             if (!it.isPaid && expenseSplit.createdBy.uid == Firebase.auth.currentUser?.uid) {
-                                Button(onClick = {
+                                TextButton(onClick = {
 
                                     it.isPaid = true
 
                                     Firebase.database.reference.child(DatabaseKeys.splits)
                                         .child(groupId).child(expenseSplit.expenseSplitId)
                                         .setValue(expenseSplit).addOnCompleteListener {
-                                            if(it.isSuccessful){
-                                                Toast.makeText(context, "Marked as paid",Toast.LENGTH_SHORT).show()
-                                            }else{Toast.makeText(context, "Failed",Toast.LENGTH_SHORT).show()
+                                            if (it.isSuccessful) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "Marked as paid",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            } else {
+                                                Toast.makeText(
+                                                    context,
+                                                    "Failed",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
 
                                             }
                                         }
