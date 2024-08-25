@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.myapps.splitwiseclone"
+    namespace = "com.myapps.splitapp"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.myapps.splitwiseclone"
+        applicationId = "com.myapps.splitapp"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

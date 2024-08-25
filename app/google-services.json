@@ -1,10 +1,30 @@
 {
   "project_info": {
     "project_number": "203837417120",
+    "firebase_url": "https://splitwiseclone-asw-default-rtdb.firebaseio.com",
     "project_id": "splitwiseclone-asw",
     "storage_bucket": "splitwiseclone-asw.appspot.com"
   },
   "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:203837417120:android:7685e04ec19cbb9091cbc5",
+        "android_client_info": {
+          "package_name": "com.myapps.splitapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmfUjc6NtEOE7Z7H970VmN0wdAYiIBV-c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
     {
       "client_info": {
         "mobilesdk_app_id": "1:203837417120:android:1eeef1126c9c8c6c91cbc5",
